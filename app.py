@@ -2,120 +2,173 @@ import streamlit as st
 from datetime import date
 
 st.set_page_config(
-    page_title="Golf Score Tracker",
+    page_title="GOLF",
     page_icon="⛳",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# -----------------------------
-# BASIC STYLING
-# -----------------------------
-st.markdown(
-    """
-    <style>
-        .stApp {
-            background-color: #000000;
-        }
+# ---------------------------------------------------
+# PAGE STYLING
+# ---------------------------------------------------
+st.markdown("""
+<style>
 
-        div[data-testid="stHeader"] {
-            background-color: rgba(0,0,0,0);
-        }
+#MainMenu {
+    visibility: hidden;
+}
 
-        .main-title {
-            font-family: monospace;
-            font-size: 96px;
-            font-weight: 900;
-            letter-spacing: 6px;
-            color: #4DDB68;
-            text-align: center;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            text-shadow: 0px 10px 0px #137C2A;
-        }
+footer {
+    visibility: hidden;
+}
 
-        .logo-box {
-            border: 1px solid #111111;
-            padding: 20px;
-            margin-bottom: 60px;
-        }
+header {
+    visibility: hidden;
+}
 
-        .play-button button {
-            background-color: #4DDB68 !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 0px !important;
-            height: 90px !important;
-            font-size: 42px !important;
-            font-weight: 900 !important;
-            letter-spacing: 2px !important;
-            width: 100% !important;
-        }
+.stApp {
+    background-color: black;
+}
 
-        .section-title {
-            color: white;
-            text-align: center;
-            font-size: 34px;
-            font-weight: 900;
-            margin-bottom: 20px;
-        }
+.block-container {
+    padding-top: 2rem;
+    max-width: 850px;
+}
 
-        label, .stTextInput label, .stDateInput label, .stNumberInput label, .stSelectbox label {
-            color: white !important;
-            font-weight: 700 !important;
-        }
+/* Main Logo */
+.golf-title {
+    text-align: center;
+    font-size: 120px;
+    font-weight: 900;
+    color: #59e36a;
+    line-height: 1;
+    margin-top: 30px;
+    margin-bottom: 50px;
+    letter-spacing: 4px;
+    font-family: Arial Black, sans-serif;
+    text-shadow:
+        0px 8px 0px #15892d;
+}
 
-        .stTextInput input, .stNumberInput input {
-            background-color: #111111 !important;
-            color: white !important;
-            border: 1px solid #4DDB68 !important;
-        }
+/* Pixel golfer box */
+.logo-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
 
-        .stSelectbox div {
-            color: white !important;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+.pixel-box {
+    width: 240px;
+    height: 240px;
+    background: linear-gradient(to bottom, #c7ffff 0%, #c7ffff 45%, #57c93f 45%, #57c93f 100%);
+    border: 6px solid #111111;
+    position: relative;
+}
 
-# -----------------------------
-# SIMPLE PAGE STATE
-# -----------------------------
+/* Big green buttons */
+div.stButton > button {
+    width: 100%;
+    background-color: #59e36a;
+    color: white;
+    border: none;
+    border-radius: 0px;
+    height: 105px;
+    font-size: 44px;
+    font-weight: 900;
+    margin-top: 30px;
+    margin-bottom: 10px;
+    font-family: Arial Black, sans-serif;
+    letter-spacing: 2px;
+}
+
+div.stButton > button:hover {
+    background-color: #45c957;
+    color: white;
+}
+
+/* Form section */
+.section-title {
+    color: white;
+    font-size: 42px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 30px;
+    font-family: Arial Black, sans-serif;
+}
+
+label {
+    color: white !important;
+    font-weight: 700 !important;
+}
+
+.stTextInput input,
+.stNumberInput input,
+.stDateInput input {
+    background-color: #111111 !important;
+    color: white !important;
+    border: 1px solid #59e36a !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------------------------------------------
+# SESSION STATE
+# ---------------------------------------------------
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
-# -----------------------------
+# ---------------------------------------------------
 # HOME PAGE
-# -----------------------------
+# ---------------------------------------------------
 if st.session_state.page == "home":
-    st.markdown('<div class="logo-box">', unsafe_allow_html=True)
-    st.markdown('<div class="main-title">GOLF</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="play-button">', unsafe_allow_html=True)
-    if st.button("PLAY GOLF", use_container_width=True):
-        st.session_state.page = "play_golf"
+    st.markdown('<div class="logo-wrapper"><div class="pixel-box"></div></div>', unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="golf-title">GOLF</div>',
+        unsafe_allow_html=True
+    )
+
+    if st.button("PLAY GOLF"):
+        st.session_state.page = "play"
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
-# -----------------------------
+# ---------------------------------------------------
 # PLAY GOLF PAGE
-# -----------------------------
-if st.session_state.page == "play_golf":
+# ---------------------------------------------------
+if st.session_state.page == "play":
+
     if st.button("← BACK"):
         st.session_state.page = "home"
         st.rerun()
 
-    st.markdown('<div class="section-title">PLAY GOLF</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">PLAY GOLF</div>',
+        unsafe_allow_html=True
+    )
 
-    with st.form("play_golf_form"):
-        round_date = st.date_input("Date", value=date.today())
-        course = st.text_input("Course")
-        tees = st.text_input("Tees")
-        holes = st.selectbox("Holes", [18, 9])
+    with st.form("round_form"):
+
+        round_date = st.date_input(
+            "DATE",
+            value=date.today()
+        )
+
+        course = st.text_input("COURSE")
+
+        tees = st.text_input("TEES")
+
+        holes = st.selectbox(
+            "HOLES",
+            [18, 9]
+        )
 
         submitted = st.form_submit_button("START ROUND")
 
         if submitted:
-            st.success("Round started. Next we will build the hole-by-hole score entry screen.")
+
+            if course.strip() == "":
+                st.error("Please enter a course.")
+            else:
+                st.success("Round started.")
