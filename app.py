@@ -31,8 +31,13 @@ header {
 }
 
 .block-container {
-    padding-top: 2rem;
+    padding-top: 1rem;
     max-width: 850px;
+}
+
+/* Video spacing */
+.video-container {
+    margin-bottom: 20px;
 }
 
 /* Main Logo */
@@ -42,27 +47,12 @@ header {
     font-weight: 900;
     color: #59e36a;
     line-height: 1;
-    margin-top: 30px;
+    margin-top: 10px;
     margin-bottom: 50px;
     letter-spacing: 4px;
     font-family: Arial Black, sans-serif;
     text-shadow:
         0px 8px 0px #15892d;
-}
-
-/* Pixel golfer box */
-.logo-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.pixel-box {
-    width: 240px;
-    height: 240px;
-    background: linear-gradient(to bottom, #c7ffff 0%, #c7ffff 45%, #57c93f 45%, #57c93f 100%);
-    border: 6px solid #111111;
-    position: relative;
 }
 
 /* Big green buttons */
@@ -75,7 +65,7 @@ div.stButton > button {
     height: 105px;
     font-size: 44px;
     font-weight: 900;
-    margin-top: 30px;
+    margin-top: 20px;
     margin-bottom: 10px;
     font-family: Arial Black, sans-serif;
     letter-spacing: 2px;
@@ -123,7 +113,11 @@ if "page" not in st.session_state:
 # ---------------------------------------------------
 if st.session_state.page == "home":
 
-    st.markdown('<div class="logo-wrapper"><div class="pixel-box"></div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="video-container">', unsafe_allow_html=True)
+
+    st.video("GolfIntro.mp4")
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown(
         '<div class="golf-title">GOLF</div>',
