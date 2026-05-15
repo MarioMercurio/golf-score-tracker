@@ -1,9 +1,14 @@
 import base64
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
+import pandas as pd
 import requests
 import streamlit as st
+
+# =========================================================
+# PAGE CONFIG
+# =========================================================
 
 st.set_page_config(
     page_title="GOLF",
@@ -12,226 +17,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# =========================================================
+# CONSTANTS
+# =========================================================
+
 VIDEO_FILE = "GolfIntro.mp4"
 API_BASE_URL = "https://api.golfcourseapi.com"
 
 # =========================================================
-# PAGE STYLING
-# =========================================================
-
-st.markdown("""
-<style>
-
-#MainMenu, footer, header {
-    visibility: hidden;
-}
-
-html, body, [class*="css"] {
-    font-family: Arial, Helvetica, sans-serif;
-}
-
-.stApp {
-    background-color: black;
-}
-
-.block-container {
-    padding-top: 1rem;
-    max-width: 1100px;
-}
-
-/* =========================
-VIDEO
-========================= */
-
-.video-wrap {
-    width: 100%;
-    margin: 20px auto 50px auto;
-    display: flex;
-    justify-content: center;
-}
-
-.video-wrap video {
-    width: 100%;
-    max-width: 760px;
-    border: 2px solid #111111;
-}
-
-/* =========================
-TITLES
-========================= */
-
-.start-title {
-    text-align: center;
-    color: #59E36A;
-    font-size: 84px;
-    font-weight: 900;
-    margin-bottom: 40px;
-    line-height: 0.95;
-}
-
-.section-title {
-    text-align: center;
-    color: #59E36A;
-    font-size: 64px;
-    font-weight: 900;
-    margin-top: 50px;
-    margin-bottom: 25px;
-    line-height: 1;
-}
-
-/* =========================
-BUTTONS
-========================= */
-
-.stButton > button {
-    background-color: #59E36A !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 0px !important;
-    height: 80px !important;
-    font-size: 28px !important;
-    font-weight: 900 !important;
-    width: 100% !important;
-}
-
-/* =========================
-LABELS
-========================= */
-
-label {
-    color: white !important;
-    font-size: 20px !important;
-    font-weight: 700 !important;
-}
-
-/* =========================
-ALL INPUT FONT SIZES
-========================= */
-
-.stSelectbox div[data-baseweb="select"] > div {
-    font-size: 26px !important;
-    min-height: 68px !important;
-}
-
-.stTextInput input {
-    font-size: 26px !important;
-    min-height: 68px !important;
-}
-
-.stDateInput input {
-    font-size: 26px !important;
-    min-height: 68px !important;
-}
-
-/* =========================
-DATE DISPLAY
-========================= */
-
-.pretty-date {
-    text-align: center;
-    color: white;
-    font-size: 34px;
-    font-weight: 700;
-    margin-top: -10px;
-    margin-bottom: 35px;
-}
-
-/* =========================
-INFO TEXT
-========================= */
-
-.api-note {
-    color: #BDBDBD;
-    text-align: center;
-    font-size: 20px;
-    line-height: 1.5;
-    margin-top: 20px;
-    margin-bottom: 30px;
-}
-
-/* =========================
-MOBILE
-========================= */
-
-@media (max-width: 768px) {
-
-    .block-container {
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-
-    .start-title {
-        font-size: 62px;
-        margin-bottom: 30px;
-    }
-
-    .section-title {
-        font-size: 42px;
-    }
-
-    .pretty-date {
-        font-size: 24px;
-        margin-bottom: 20px;
-    }
-
-    label {
-        font-size: 16px !important;
-    }
-
-    .stSelectbox div[data-baseweb="select"] > div {
-        font-size: 22px !important;
-        min-height: 60px !important;
-    }
-
-    .stTextInput input {
-        font-size: 22px !important;
-        min-height: 60px !important;
-    }
-
-    .stDateInput input {
-        font-size: 22px !important;
-        min-height: 60px !important;
-    }
-
-    .api-note {
-        font-size: 16px;
-    }
-
-    .stButton > button {
-        height: 68px !important;
-        font-size: 22px !important;
-    }
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# =========================================================
-# VIDEO
-# =========================================================
-
-def autoplay_video(video_path):
-    path = Path(video_path)
-
-    if not path.exists():
-        return
-
-    video_bytes = path.read_bytes()
-    encoded = base64.b64encode(video_bytes).decode()
-
-    st.markdown(
-        f"""
-        <div class="video-wrap">
-            <video autoplay muted loop playsinline>
-                <source src="data:video/mp4;base64,{encoded}" type="video/mp4">
-            </video>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-# =========================================================
-# API
+# API FUNCTIONS
 # =========================================================
 
 @st.cache_data
@@ -251,6 +45,7 @@ def api_search_courses(search_query):
     }
 
     try:
+
         response = requests.get(
             f"{API_BASE_URL}/v1/search",
             headers=headers,
@@ -265,6 +60,42 @@ def api_search_courses(search_query):
 
     except Exception:
         return []
+
+# =========================================================
+# COURSE DETAILS
+# =========================================================
+
+@st.cache_data
+def api_get_course_details(course_id):
+
+    api_key = st.secrets.get("GOLF_API_KEY", "")
+
+    if not api_key:
+        return {}
+
+    headers = {
+        "Authorization": f"Key {api_key}"
+    }
+
+    try:
+
+        response = requests.get(
+            f"{API_BASE_URL}/v1/courses/{course_id}",
+            headers=headers,
+            timeout=20
+        )
+
+        if response.status_code != 200:
+            return {}
+
+        return response.json()
+
+    except Exception:
+        return {}
+
+# =========================================================
+# DISPLAY NAME
+# =========================================================
 
 def get_course_display_name(course):
 
@@ -284,6 +115,232 @@ def get_course_display_name(course):
     return main_name
 
 # =========================================================
+# TEE OPTIONS
+# =========================================================
+
+def get_tee_options(course_details):
+
+    tee_options = []
+
+    course_data = course_details.get("course", {})
+    tees = course_data.get("tees", {})
+
+    if not isinstance(tees, dict):
+        return tee_options
+
+    for gender in ["male", "female"]:
+
+        gender_tees = tees.get(gender, [])
+
+        if not isinstance(gender_tees, list):
+            continue
+
+        for tee in gender_tees:
+
+            tee_name = tee.get("tee_name", "Unnamed Tee")
+            total_yards = tee.get("total_yards", "")
+            rating = tee.get("course_rating", "")
+            slope = tee.get("slope_rating", "")
+
+            label = f"{tee_name} • {total_yards} YDS • {gender.title()}"
+
+            tee_options.append({
+                "label": label,
+                "tee": tee
+            })
+
+    return tee_options
+
+# =========================================================
+# HOLES
+# =========================================================
+
+def get_holes_from_tee(tee):
+
+    holes = tee.get("holes", [])
+
+    clean_holes = []
+
+    for index, hole in enumerate(holes, start=1):
+
+        clean_holes.append({
+            "hole": index,
+            "par": int(hole.get("par", 4)),
+            "yards": int(hole.get("yards", 0)),
+            "handicap": hole.get("handicap", "")
+        })
+
+    return clean_holes
+
+# =========================================================
+# VIDEO
+# =========================================================
+
+def autoplay_video(video_path):
+
+    path = Path(video_path)
+
+    if not path.exists():
+        return
+
+    video_bytes = path.read_bytes()
+
+    encoded = base64.b64encode(video_bytes).decode()
+
+    st.markdown(
+        f"""
+        <div class="video-wrap">
+            <video autoplay muted loop playsinline>
+                <source src="data:video/mp4;base64,{encoded}" type="video/mp4">
+            </video>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+# =========================================================
+# CSS
+# =========================================================
+
+st.markdown("""
+<style>
+
+#MainMenu,
+footer,
+header {
+    visibility: hidden;
+}
+
+html,
+body,
+[data-testid="stAppViewContainer"] {
+    background: black;
+}
+
+.stApp {
+    background-color: black;
+}
+
+.block-container {
+    padding-top: 0.5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    max-width: 1100px;
+}
+
+.video-wrap {
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 40px;
+    display: flex;
+    justify-content: center;
+}
+
+.video-wrap video {
+    width: 100%;
+    max-width: 700px;
+}
+
+.start-title {
+    text-align: center;
+    color: #5BE06C;
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 0.95;
+    margin-top: 10px;
+    margin-bottom: 45px;
+}
+
+label {
+    color: white !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+}
+
+.api-note {
+    color: #B8B8B8;
+    text-align: center;
+    font-size: 18px;
+    margin-top: 25px;
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.stSelectbox div[data-baseweb="select"] > div {
+    background-color: #242533 !important;
+    color: white !important;
+    font-size: 28px !important;
+    min-height: 72px !important;
+    border-radius: 14px !important;
+}
+
+.stTextInput input {
+    background-color: #242533 !important;
+    color: white !important;
+    font-size: 28px !important;
+    min-height: 72px !important;
+    border-radius: 14px !important;
+}
+
+.stButton > button {
+    background-color: #5BE06C !important;
+    color: black !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-size: 28px !important;
+    font-weight: 900 !important;
+    height: 72px !important;
+    width: 100% !important;
+}
+
+div[data-testid="stAlert"] {
+    font-size: 24px;
+    border-radius: 16px;
+}
+
+@media (max-width: 768px) {
+
+    .block-container {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 0px;
+    }
+
+    .start-title {
+        font-size: 58px;
+        margin-bottom: 28px;
+    }
+
+    label {
+        font-size: 16px !important;
+    }
+
+    .stSelectbox div[data-baseweb="select"] > div {
+        font-size: 22px !important;
+        min-height: 64px !important;
+    }
+
+    .stTextInput input {
+        font-size: 22px !important;
+        min-height: 64px !important;
+    }
+
+    .api-note {
+        font-size: 15px;
+        margin-top: 18px;
+        margin-bottom: 18px;
+    }
+
+    .stButton > button {
+        font-size: 22px !important;
+        height: 64px !important;
+    }
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# =========================================================
 # SESSION STATE
 # =========================================================
 
@@ -298,10 +355,12 @@ if st.session_state.screen == "home":
 
     autoplay_video(VIDEO_FILE)
 
-    col1, col2, col3 = st.columns([1,2,1])
+    col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
+
         if st.button("PLAY GOLF"):
+
             st.session_state.screen = "start_round"
             st.rerun()
 
@@ -316,17 +375,35 @@ elif st.session_state.screen == "start_round":
         unsafe_allow_html=True
     )
 
-    round_date = st.date_input(
+    # =========================================
+    # DATE
+    # =========================================
+
+    today = date.today()
+
+    upcoming_dates = [
+        today + timedelta(days=i)
+        for i in range(0, 365)
+    ]
+
+    formatted_dates = [
+        d.strftime("%A, %B %d, %Y")
+        for d in upcoming_dates
+    ]
+
+    selected_date_label = st.selectbox(
         "DATE",
-        value=date.today()
+        formatted_dates,
+        index=0
     )
 
-    formatted_date = round_date.strftime("%A, %B %d, %Y")
+    selected_date_index = formatted_dates.index(selected_date_label)
 
-    st.markdown(
-        f"<div class='pretty-date'>{formatted_date}</div>",
-        unsafe_allow_html=True
-    )
+    round_date = upcoming_dates[selected_date_index]
+
+    # =========================================
+    # STATES
+    # =========================================
 
     states = [
         "Alabama",
@@ -384,8 +461,12 @@ elif st.session_state.screen == "start_round":
     selected_state = st.selectbox(
         "STATE",
         states,
-        index=17
+        index=16
     )
+
+    # =========================================
+    # COURSE SEARCH
+    # =========================================
 
     search_course = st.text_input(
         "COURSE SEARCH",
@@ -402,7 +483,6 @@ elif st.session_state.screen == "start_round":
     )
 
     if search_course.strip() == "":
-        st.info("Type a course name to search.")
         st.stop()
 
     api_matches = api_search_courses(search_course)
@@ -425,9 +505,50 @@ elif st.session_state.screen == "start_round":
         for course in filtered_matches
     ]
 
-    selected_course = st.selectbox(
+    selected_course_label = st.selectbox(
         "SELECT COURSE",
         match_labels
     )
 
+    selected_course_index = match_labels.index(selected_course_label)
+
+    selected_course = filtered_matches[selected_course_index]
+
+    course_id = selected_course.get("id")
+
+    course_details = api_get_course_details(course_id)
+
+    tee_options = get_tee_options(course_details)
+
+    tee_labels = [
+        option["label"]
+        for option in tee_options
+    ]
+
+    selected_tee_label = st.selectbox(
+        "TEE",
+        tee_labels
+    )
+
+    selected_tee_index = tee_labels.index(selected_tee_label)
+
+    selected_tee = tee_options[selected_tee_index]["tee"]
+
+    tee_holes = get_holes_from_tee(selected_tee)
+
     st.success("Course loaded successfully.")
+
+    # =========================================
+    # START ROUND BUTTON
+    # =========================================
+
+    if st.button("START ROUND"):
+
+        st.session_state.round_date = round_date
+        st.session_state.course = selected_course_label
+        st.session_state.tee = selected_tee_label
+        st.session_state.hole_data = tee_holes
+
+        st.session_state.screen = "scorecard"
+
+        st.rerun()
