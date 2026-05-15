@@ -33,8 +33,24 @@ US_STATES = {
 }
 
 CLUBS = ["DR", "3W", "5W", "HYB", "4I", "5I", "6I", "7I", "8I", "9I", "PW", "GW", "SW", "LW"]
+
 TEE_LOCATIONS = ["LOST LEFT", "LEFT", "CENTER", "RIGHT", "LOST RIGHT"]
-TEE_QUALITIES = ["CRUSHED", "AVERAGE", "MIS-HIT"]
+
+TEE_QUALITIES_PAR_3 = [
+    "TOO LONG",
+    "LITTLE LONG",
+    "PERFECT",
+    "LITTLE SHORT",
+    "MIS-HIT SHORT"
+]
+
+TEE_QUALITIES_PAR_4_5 = [
+    "TOO LONG",
+    "CRUSHED",
+    "AVERAGE",
+    "MIS-HIT SHORT"
+]
+
 HAZARDS = ["OB", "GREEN BUNKER", "FAIRWAY BUNKER", "WATER", "DROP"]
 GASHES = ["DUFF", "HERO SHOT", "MISREAD", "UNDER CLUB", "BAD TARGET AREA"]
 
@@ -56,6 +72,7 @@ def api_search_courses(search_query):
             params={"search_query": search_query},
             timeout=20
         )
+
         if response.status_code != 200:
             return []
 
@@ -78,6 +95,7 @@ def api_get_course_details(course_id):
             headers={"Authorization": f"Key {api_key}"},
             timeout=20
         )
+
         if response.status_code != 200:
             return {}
 
@@ -174,17 +192,31 @@ def get_holes_from_tee(tee):
     return clean_holes
 
 
+def get_tee_quality_options(par):
+    if int(par) == 3:
+        return TEE_QUALITIES_PAR_3
+    return TEE_QUALITIES_PAR_4_5
+
+
+def get_default_tee_quality(par):
+    if int(par) == 3:
+        return "PERFECT"
+    return "AVERAGE"
+
+
 def default_hole_entry(hole_info):
+    par = hole_info["par"]
+
     return {
         "hole": hole_info["hole"],
-        "par": hole_info["par"],
+        "par": par,
         "yards": hole_info["yards"],
         "handicap": hole_info["handicap"],
-        "score": hole_info["par"],
+        "score": par,
         "putts": 2,
         "tee_club": "DR",
         "tee_location": "CENTER",
-        "tee_quality": "AVERAGE",
+        "tee_quality": get_default_tee_quality(par),
         "inside_100_in_3": "NO",
         "hazards": {h: 0 for h in HAZARDS},
         "gashes": {g: 0 for g in GASHES},
@@ -193,9 +225,11 @@ def default_hole_entry(hole_info):
 
 def init_round_entries():
     st.session_state.round_entries = {}
+
     for hole_info in st.session_state.hole_data:
         hole_num = hole_info["hole"]
         st.session_state.round_entries[hole_num] = default_hole_entry(hole_info)
+
     st.session_state.current_hole_index = 0
 
 
@@ -219,7 +253,7 @@ st.markdown("""
 
 .block-container {
     padding-top: 1rem;
-    max-width: 950px;
+    max-width: 1100px;
 }
 
 .video-wrap {
@@ -275,7 +309,7 @@ st.markdown("""
 
 .section-title {
     color: #4DDB68;
-    font-size: 52px;
+    font-size: 58px;
     font-weight: 1000;
     text-align: center;
     margin-top: 26px;
@@ -326,8 +360,8 @@ input {
     color: white !important;
     border: none !important;
     border-radius: 0px !important;
-    min-height: 74px !important;
-    font-size: 24px !important;
+    min-height: 68px !important;
+    font-size: 22px !important;
     font-weight: 900 !important;
     width: 100% !important;
 }
@@ -349,30 +383,39 @@ div[data-baseweb="select"] > div {
     font-size: 22px !important;
 }
 
-div[role="radiogroup"] {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+.tee-grid-wrap {
+    margin-top: 8px;
 }
 
-div[role="radiogroup"] label {
-    background-color: #191919;
-    border: 2px solid #4DDB68;
-    padding: 14px 18px;
-    min-width: 120px;
-    justify-content: center;
+.tee-grid-heading {
+    color: yellow;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 1000;
+    margin-bottom: 8px;
 }
 
-div[role="radiogroup"] label p {
-    color: white !important;
-    font-size: 20px !important;
-    font-weight: 900 !important;
+.tee-selected-note {
+    color: #4DDB68;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 1000;
+    margin-top: 18px;
+    margin-bottom: 8px;
+}
+
+.tee-grid-caption {
+    color: #AAAAAA;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 16px;
 }
 
 @media (max-width: 768px) {
     .block-container {
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-left: .65rem;
+        padding-right: .65rem;
         padding-top: .5rem;
         max-width: 100%;
     }
@@ -395,13 +438,13 @@ div[role="radiogroup"] label p {
     }
 
     .big-label {
-        font-size: 46px;
+        font-size: 44px;
         margin-top: 16px;
         margin-bottom: 0px;
     }
 
     .section-title {
-        font-size: 46px;
+        font-size: 48px;
         line-height: 1.05;
         margin-top: 24px;
         margin-bottom: 22px;
@@ -413,12 +456,9 @@ div[role="radiogroup"] label p {
     }
 
     .stButton > button {
-        min-height: 66px !important;
-        font-size: 22px !important;
-    }
-
-    div[data-testid="stNumberInput"] {
-        margin-bottom: 8px;
+        min-height: 58px !important;
+        font-size: 16px !important;
+        padding: 4px 2px !important;
     }
 
     div[data-testid="stNumberInput"] input {
@@ -431,27 +471,13 @@ div[role="radiogroup"] label p {
         font-size: 22px !important;
     }
 
-    div[role="radiogroup"] {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-    }
-
-    div[role="radiogroup"] label {
-        min-width: 0px !important;
-        width: 100%;
-        padding: 15px 8px;
-        text-align: center;
-    }
-
-    div[role="radiogroup"] label p {
-        font-size: 17px !important;
-    }
-
-    .small-note {
+    .tee-grid-heading {
         font-size: 13px;
-        margin-top: -6px;
-        margin-bottom: 14px;
+        margin-bottom: 4px;
+    }
+
+    .tee-grid-caption {
+        font-size: 13px;
     }
 }
 </style>
@@ -471,6 +497,73 @@ def autoplay_video(video_path):
             <video autoplay muted loop playsinline>
                 <source src="data:video/mp4;base64,{encoded}" type="video/mp4">
             </video>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def render_tee_shot_grid(hole_num, entry):
+    par = int(entry["par"])
+    quality_options = get_tee_quality_options(par)
+
+    if entry["tee_quality"] not in quality_options:
+        entry["tee_quality"] = get_default_tee_quality(par)
+
+    st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>TEE SHOT</div>", unsafe_allow_html=True)
+
+    if par == 3:
+        st.markdown(
+            "<div class='tee-grid-caption'>PAR 3 TEE SHOT GRID</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            "<div class='tee-grid-caption'>PAR 4 / PAR 5 TEE SHOT GRID</div>",
+            unsafe_allow_html=True
+        )
+
+    selected_club = st.selectbox(
+        "CLUB",
+        CLUBS,
+        index=CLUBS.index(entry["tee_club"]) if entry["tee_club"] in CLUBS else 0,
+        key=f"club_{hole_num}"
+    )
+    set_value(hole_num, "tee_club", selected_club)
+
+    st.markdown("<div class='big-label' style='font-size:34px;'>LOCATION:</div>", unsafe_allow_html=True)
+
+    location_cols = st.columns(5)
+
+    for col_index, location in enumerate(TEE_LOCATIONS):
+        with location_cols[col_index]:
+            st.markdown(
+                f"<div class='tee-grid-heading'>{location}</div>",
+                unsafe_allow_html=True
+            )
+
+            for quality in quality_options:
+                is_selected = (
+                    entry["tee_location"] == location
+                    and entry["tee_quality"] == quality
+                )
+
+                button_text = f"✓ {quality}" if is_selected else quality
+
+                if st.button(
+                    button_text,
+                    key=f"tee_grid_{hole_num}_{location}_{quality}",
+                    use_container_width=True
+                ):
+                    set_value(hole_num, "tee_location", location)
+                    set_value(hole_num, "tee_quality", quality)
+                    st.rerun()
+
+    st.markdown(
+        f"""
+        <div class='tee-selected-note'>
+        SELECTED: {entry["tee_location"]} / {entry["tee_quality"]}
         </div>
         """,
         unsafe_allow_html=True
@@ -665,46 +758,16 @@ elif st.session_state.screen == "scorecard":
     )
     set_value(hole_num, "putts", putts)
 
-    st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>TEE SHOT</div>", unsafe_allow_html=True)
-
-    selected_club = st.selectbox(
-        "CLUB",
-        CLUBS,
-        index=CLUBS.index(entry["tee_club"]) if entry["tee_club"] in CLUBS else 0,
-        key=f"club_{hole_num}"
-    )
-    set_value(hole_num, "tee_club", selected_club)
-
-    st.markdown("<div class='big-label' style='font-size:34px;'>LOCATION:</div>", unsafe_allow_html=True)
-
-    tee_location = st.radio(
-        "TEE LOCATION",
-        TEE_LOCATIONS,
-        index=TEE_LOCATIONS.index(entry["tee_location"]) if entry["tee_location"] in TEE_LOCATIONS else 2,
-        horizontal=True,
-        key=f"tee_location_{hole_num}",
-        label_visibility="collapsed"
-    )
-    set_value(hole_num, "tee_location", tee_location)
-
-    st.markdown("<div class='big-label' style='font-size:34px;'>QUALITY:</div>", unsafe_allow_html=True)
-
-    tee_quality = st.radio(
-        "TEE QUALITY",
-        TEE_QUALITIES,
-        index=TEE_QUALITIES.index(entry["tee_quality"]) if entry["tee_quality"] in TEE_QUALITIES else 1,
-        horizontal=True,
-        key=f"tee_quality_{hole_num}",
-        label_visibility="collapsed"
-    )
-    set_value(hole_num, "tee_quality", tee_quality)
+    render_tee_shot_grid(hole_num, entry)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>PENALTIES / HAZARDS</div>", unsafe_allow_html=True)
 
     for hazard in HAZARDS:
-        st.markdown(f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{hazard}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{hazard}</div>",
+            unsafe_allow_html=True
+        )
         value = st.number_input(
             hazard,
             min_value=0,
@@ -739,7 +802,10 @@ elif st.session_state.screen == "scorecard":
     st.markdown("<div class='section-title'>GASHES</div>", unsafe_allow_html=True)
 
     for gash in GASHES:
-        st.markdown(f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{gash}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{gash}</div>",
+            unsafe_allow_html=True
+        )
         value = st.number_input(
             gash,
             min_value=0,
