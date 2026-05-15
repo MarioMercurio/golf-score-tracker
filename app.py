@@ -2,7 +2,6 @@ import base64
 from datetime import date, timedelta
 from pathlib import Path
 
-import pandas as pd
 import requests
 import streamlit as st
 
@@ -228,6 +227,10 @@ body,
     max-width: 1100px;
 }
 
+/* =====================================================
+VIDEO
+===================================================== */
+
 .video-wrap {
     width: 100%;
     margin-top: 10px;
@@ -241,6 +244,10 @@ body,
     max-width: 700px;
 }
 
+/* =====================================================
+TITLES
+===================================================== */
+
 .start-title {
     text-align: center;
     color: #5BE06C;
@@ -251,11 +258,19 @@ body,
     margin-bottom: 45px;
 }
 
+/* =====================================================
+LABELS
+===================================================== */
+
 label {
     color: white !important;
     font-size: 22px !important;
     font-weight: 700 !important;
 }
+
+/* =====================================================
+API NOTE
+===================================================== */
 
 .api-note {
     color: #B8B8B8;
@@ -266,21 +281,53 @@ label {
     line-height: 1.5;
 }
 
+/* =====================================================
+SELECT BOXES
+===================================================== */
+
 .stSelectbox div[data-baseweb="select"] > div {
     background-color: #242533 !important;
     color: white !important;
     font-size: 28px !important;
-    min-height: 72px !important;
+    min-height: 74px !important;
     border-radius: 14px !important;
+
+    display: flex !important;
+    align-items: center !important;
 }
+
+/* dropdown text */
+.stSelectbox span {
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* =====================================================
+TEXT INPUT
+===================================================== */
 
 .stTextInput input {
     background-color: #242533 !important;
     color: white !important;
     font-size: 28px !important;
-    min-height: 72px !important;
+    height: 74px !important;
     border-radius: 14px !important;
+
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+
+    line-height: 74px !important;
 }
+
+/* placeholder */
+.stTextInput input::placeholder {
+    font-size: 28px !important;
+    opacity: 0.7 !important;
+}
+
+/* =====================================================
+BUTTONS
+===================================================== */
 
 .stButton > button {
     background-color: #5BE06C !important;
@@ -293,10 +340,18 @@ label {
     width: 100% !important;
 }
 
+/* =====================================================
+ALERTS
+===================================================== */
+
 div[data-testid="stAlert"] {
     font-size: 24px;
     border-radius: 16px;
 }
+
+/* =====================================================
+MOBILE
+===================================================== */
 
 @media (max-width: 768px) {
 
@@ -317,12 +372,22 @@ div[data-testid="stAlert"] {
 
     .stSelectbox div[data-baseweb="select"] > div {
         font-size: 22px !important;
-        min-height: 64px !important;
+        min-height: 66px !important;
+    }
+
+    .stSelectbox span {
+        font-size: 22px !important;
     }
 
     .stTextInput input {
         font-size: 22px !important;
-        min-height: 64px !important;
+        height: 66px !important;
+        line-height: 66px !important;
+        padding-right: 16px !important;
+    }
+
+    .stTextInput input::placeholder {
+        font-size: 22px !important;
     }
 
     .api-note {
@@ -348,7 +413,7 @@ if "screen" not in st.session_state:
     st.session_state.screen = "home"
 
 # =========================================================
-# HOME
+# HOME SCREEN
 # =========================================================
 
 if st.session_state.screen == "home":
@@ -375,9 +440,9 @@ elif st.session_state.screen == "start_round":
         unsafe_allow_html=True
     )
 
-    # =========================================
+    # =====================================================
     # DATE
-    # =========================================
+    # =====================================================
 
     today = date.today()
 
@@ -401,9 +466,9 @@ elif st.session_state.screen == "start_round":
 
     round_date = upcoming_dates[selected_date_index]
 
-    # =========================================
+    # =====================================================
     # STATES
-    # =========================================
+    # =====================================================
 
     states = [
         "Alabama",
@@ -464,9 +529,9 @@ elif st.session_state.screen == "start_round":
         index=16
     )
 
-    # =========================================
+    # =====================================================
     # COURSE SEARCH
-    # =========================================
+    # =====================================================
 
     search_course = st.text_input(
         "COURSE SEARCH",
@@ -538,9 +603,9 @@ elif st.session_state.screen == "start_round":
 
     st.success("Course loaded successfully.")
 
-    # =========================================
+    # =====================================================
     # START ROUND BUTTON
-    # =========================================
+    # =====================================================
 
     if st.button("START ROUND"):
 
