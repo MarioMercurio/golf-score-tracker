@@ -2,6 +2,7 @@ import base64
 from datetime import date
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 st.set_page_config(
@@ -12,6 +13,12 @@ st.set_page_config(
 )
 
 VIDEO_FILE = "GolfIntro.mp4"
+COURSE_FILE = "courses.csv"
+
+# ---------------------------------------------------
+# LOAD COURSE DATA
+# ---------------------------------------------------
+courses_df = pd.read_csv(COURSE_FILE)
 
 # ---------------------------------------------------
 # PAGE STYLING
@@ -92,7 +99,7 @@ label {
     border: 1px solid #59e36a !important;
 }
 
-/* Score cards */
+/* Hole Titles */
 .score-hole {
     color: white;
     font-size: 24px;
@@ -100,6 +107,7 @@ label {
     margin-top: 20px;
 }
 
+/* Totals */
 .score-total {
     color: #59e36a;
     font-size: 40px;
@@ -173,16 +181,30 @@ if st.session_state.page == "start_round":
         unsafe_allow_html=True
     )
 
+    # COURSE OPTIONS
+    course_options = sorted(courses_df["course"].unique())
+
+    selected_course = st.selectbox(
+        "COURSE",
+        course_options
+    )
+
+    # TEE OPTIONS BASED ON COURSE
+    tee_options = sorted(
+        courses_df[courses_df["course"] == selected_course]["tee"].unique()
+    )
+
+    selected_tee = st.selectbox(
+        "TEES",
+        tee_options
+    )
+
     with st.form("start_round_form"):
 
         round_date = st.date_input(
             "DATE",
             value=date.today()
         )
-
-        course = st.text_input("COURSE")
-
-        tees = st.text_input("TEES")
 
         holes = st.selectbox(
             "HOLES",
@@ -193,11 +215,20 @@ if st.session_state.page == "start_round":
 
         if submitted:
 
-            st.session_state.holes = holes
-            st.session_state.scores = [4] * holes
-            st.session_state.course = course
-            st.session_state.tees = tees
+            course_data = courses_df[
+                (courses_df["course"] == selected_course) &
+                (courses_df["tee"] == selected_tee)
+            ]
+
+            st.session_state.holes = len(course_data)
+            st.session_state.scores = [4] * len(course_data)
+
+            st.session_state.course = selected_course
+            st.session_state.tee = selected_tee
             st.session_state.round_date = round_date
+
+            st.session_state.pars = course_data["par"].tolist()
+            st.session_state.yardages = course_data["yardage"].tolist()
 
             st.session_state.page = "score_entry"
             st.rerun()
@@ -212,12 +243,25 @@ if st.session_state.page == "score_entry":
         unsafe_allow_html=True
     )
 
+    st.markdown(
+        f"<h3 style='color:white; text-align:center;'>TEE: {st.session_state.tee}</h3>",
+        unsafe_allow_html=True
+    )
+
     total_score = 0
+    total_par = sum(st.session_state.pars)
 
     for hole in range(st.session_state.holes):
 
+        par = st.session_state.pars[hole]
+        yardage = st.session_state.yardages[hole]
+
         st.markdown(
-            f'<div class="score-hole">HOLE {hole + 1}</div>',
+            f"""
+            <div class="score-hole">
+                HOLE {hole + 1} • PAR {par} • {yardage} YDS
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
@@ -232,8 +276,22 @@ if st.session_state.page == "score_entry":
         st.session_state.scores[hole] = score
         total_score += score
 
+    relative_to_par = total_score - total_par
+
+    if relative_to_par > 0:
+        relation_text = f"+{relative_to_par}"
+    elif relative_to_par < 0:
+        relation_text = f"{relative_to_par}"
+    else:
+        relation_text = "E"
+
     st.markdown(
-        f'<div class="score-total">TOTAL: {total_score}</div>',
+        f"""
+        <div class="score-total">
+            TOTAL: {total_score}<br>
+            ({relation_text})
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
