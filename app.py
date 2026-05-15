@@ -5,10 +5,6 @@ from pathlib import Path
 import requests
 import streamlit as st
 
-# =========================================================
-# PAGE CONFIG
-# =========================================================
-
 st.set_page_config(
     page_title="GOLF",
     page_icon="⛳",
@@ -16,39 +12,22 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# =========================================================
-# CONSTANTS
-# =========================================================
-
 VIDEO_FILE = "GolfIntro.mp4"
 API_BASE_URL = "https://api.golfcourseapi.com"
 
-# =========================================================
-# API FUNCTIONS
-# =========================================================
 
 @st.cache_data
 def api_search_courses(search_query):
-
     api_key = st.secrets.get("GOLF_API_KEY", "")
 
     if not api_key:
         return []
 
-    headers = {
-        "Authorization": f"Key {api_key}"
-    }
-
-    params = {
-        "search_query": search_query
-    }
-
     try:
-
         response = requests.get(
             f"{API_BASE_URL}/v1/search",
-            headers=headers,
-            params=params,
+            headers={"Authorization": f"Key {api_key}"},
+            params={"search_query": search_query},
             timeout=20
         )
 
@@ -60,27 +39,18 @@ def api_search_courses(search_query):
     except Exception:
         return []
 
-# =========================================================
-# COURSE DETAILS
-# =========================================================
 
 @st.cache_data
 def api_get_course_details(course_id):
-
     api_key = st.secrets.get("GOLF_API_KEY", "")
 
     if not api_key:
         return {}
 
-    headers = {
-        "Authorization": f"Key {api_key}"
-    }
-
     try:
-
         response = requests.get(
             f"{API_BASE_URL}/v1/courses/{course_id}",
-            headers=headers,
+            headers={"Authorization": f"Key {api_key}"},
             timeout=20
         )
 
@@ -92,12 +62,8 @@ def api_get_course_details(course_id):
     except Exception:
         return {}
 
-# =========================================================
-# DISPLAY NAME
-# =========================================================
 
 def get_course_display_name(course):
-
     club = course.get("club_name", "")
     course_name = course.get("course_name", "")
     city = course.get("city", "")
@@ -107,20 +73,13 @@ def get_course_display_name(course):
 
     if city and state:
         return f"{main_name} — {city}, {state}"
-
     if state:
         return f"{main_name} — {state}"
-
     return main_name
 
-# =========================================================
-# TEE OPTIONS
-# =========================================================
 
 def get_tee_options(course_details):
-
     tee_options = []
-
     course_data = course_details.get("course", {})
     tees = course_data.get("tees", {})
 
@@ -128,18 +87,14 @@ def get_tee_options(course_details):
         return tee_options
 
     for gender in ["male", "female"]:
-
         gender_tees = tees.get(gender, [])
 
         if not isinstance(gender_tees, list):
             continue
 
         for tee in gender_tees:
-
             tee_name = tee.get("tee_name", "Unnamed Tee")
             total_yards = tee.get("total_yards", "")
-            rating = tee.get("course_rating", "")
-            slope = tee.get("slope_rating", "")
 
             label = f"{tee_name} • {total_yards} YDS • {gender.title()}"
 
@@ -150,18 +105,11 @@ def get_tee_options(course_details):
 
     return tee_options
 
-# =========================================================
-# HOLES
-# =========================================================
 
 def get_holes_from_tee(tee):
-
-    holes = tee.get("holes", [])
-
     clean_holes = []
 
-    for index, hole in enumerate(holes, start=1):
-
+    for index, hole in enumerate(tee.get("holes", []), start=1):
         clean_holes.append({
             "hole": index,
             "par": int(hole.get("par", 4)),
@@ -171,20 +119,14 @@ def get_holes_from_tee(tee):
 
     return clean_holes
 
-# =========================================================
-# VIDEO
-# =========================================================
 
 def autoplay_video(video_path):
-
     path = Path(video_path)
 
     if not path.exists():
         return
 
-    video_bytes = path.read_bytes()
-
-    encoded = base64.b64encode(video_bytes).decode()
+    encoded = base64.b64encode(path.read_bytes()).decode()
 
     st.markdown(
         f"""
@@ -197,9 +139,6 @@ def autoplay_video(video_path):
         unsafe_allow_html=True
     )
 
-# =========================================================
-# CSS
-# =========================================================
 
 st.markdown("""
 <style>
@@ -227,10 +166,6 @@ body,
     max-width: 1100px;
 }
 
-/* =====================================================
-VIDEO
-===================================================== */
-
 .video-wrap {
     width: 100%;
     margin-top: 10px;
@@ -244,10 +179,6 @@ VIDEO
     max-width: 700px;
 }
 
-/* =====================================================
-TITLES
-===================================================== */
-
 .start-title {
     text-align: center;
     color: #5BE06C;
@@ -258,19 +189,11 @@ TITLES
     margin-bottom: 45px;
 }
 
-/* =====================================================
-LABELS
-===================================================== */
-
 label {
     color: white !important;
     font-size: 22px !important;
     font-weight: 700 !important;
 }
-
-/* =====================================================
-API NOTE
-===================================================== */
 
 .api-note {
     color: #B8B8B8;
@@ -281,53 +204,49 @@ API NOTE
     line-height: 1.5;
 }
 
-/* =====================================================
-SELECT BOXES
-===================================================== */
-
 .stSelectbox div[data-baseweb="select"] > div {
     background-color: #242533 !important;
     color: white !important;
     font-size: 28px !important;
     min-height: 74px !important;
     border-radius: 14px !important;
-
     display: flex !important;
     align-items: center !important;
 }
 
-/* dropdown text */
 .stSelectbox span {
     display: flex !important;
     align-items: center !important;
+    font-size: 28px !important;
 }
 
-/* =====================================================
-TEXT INPUT
-===================================================== */
+/* COURSE SEARCH FIX */
+.stTextInput div[data-baseweb="input"] {
+    background-color: #242533 !important;
+    border-radius: 14px !important;
+    min-height: 74px !important;
+    height: 74px !important;
+    display: flex !important;
+    align-items: center !important;
+}
 
 .stTextInput input {
-    background-color: #242533 !important;
+    background-color: transparent !important;
     color: white !important;
     font-size: 28px !important;
     height: 74px !important;
-    border-radius: 14px !important;
-
+    min-height: 74px !important;
+    line-height: normal !important;
     padding-top: 0px !important;
     padding-bottom: 0px !important;
-
-    line-height: 74px !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
-/* placeholder */
 .stTextInput input::placeholder {
     font-size: 28px !important;
     opacity: 0.7 !important;
 }
-
-/* =====================================================
-BUTTONS
-===================================================== */
 
 .stButton > button {
     background-color: #5BE06C !important;
@@ -340,18 +259,10 @@ BUTTONS
     width: 100% !important;
 }
 
-/* =====================================================
-ALERTS
-===================================================== */
-
 div[data-testid="stAlert"] {
     font-size: 24px;
     border-radius: 16px;
 }
-
-/* =====================================================
-MOBILE
-===================================================== */
 
 @media (max-width: 768px) {
 
@@ -373,16 +284,28 @@ MOBILE
     .stSelectbox div[data-baseweb="select"] > div {
         font-size: 22px !important;
         min-height: 66px !important;
+        height: 66px !important;
     }
 
     .stSelectbox span {
         font-size: 22px !important;
     }
 
+    .stTextInput div[data-baseweb="input"] {
+        min-height: 76px !important;
+        height: 76px !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
     .stTextInput input {
         font-size: 22px !important;
-        height: 66px !important;
-        line-height: 66px !important;
+        height: 76px !important;
+        min-height: 76px !important;
+        line-height: normal !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+        padding-left: 24px !important;
         padding-right: 16px !important;
     }
 
@@ -405,33 +328,21 @@ MOBILE
 </style>
 """, unsafe_allow_html=True)
 
-# =========================================================
-# SESSION STATE
-# =========================================================
 
 if "screen" not in st.session_state:
     st.session_state.screen = "home"
 
-# =========================================================
-# HOME SCREEN
-# =========================================================
 
 if st.session_state.screen == "home":
-
     autoplay_video(VIDEO_FILE)
 
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
-
         if st.button("PLAY GOLF"):
-
             st.session_state.screen = "start_round"
             st.rerun()
 
-# =========================================================
-# START ROUND
-# =========================================================
 
 elif st.session_state.screen == "start_round":
 
@@ -439,10 +350,6 @@ elif st.session_state.screen == "start_round":
         "<div class='start-title'>START ROUND</div>",
         unsafe_allow_html=True
     )
-
-    # =====================================================
-    # DATE
-    # =====================================================
 
     today = date.today()
 
@@ -463,64 +370,19 @@ elif st.session_state.screen == "start_round":
     )
 
     selected_date_index = formatted_dates.index(selected_date_label)
-
     round_date = upcoming_dates[selected_date_index]
 
-    # =====================================================
-    # STATES
-    # =====================================================
-
     states = [
-        "Alabama",
-        "Alaska",
-        "Arizona",
-        "Arkansas",
-        "California",
-        "Colorado",
-        "Connecticut",
-        "Delaware",
-        "Florida",
-        "Georgia",
-        "Hawaii",
-        "Idaho",
-        "Illinois",
-        "Indiana",
-        "Iowa",
-        "Kansas",
-        "Kentucky",
-        "Louisiana",
-        "Maine",
-        "Maryland",
-        "Massachusetts",
-        "Michigan",
-        "Minnesota",
-        "Mississippi",
-        "Missouri",
-        "Montana",
-        "Nebraska",
-        "Nevada",
-        "New Hampshire",
-        "New Jersey",
-        "New Mexico",
-        "New York",
-        "North Carolina",
-        "North Dakota",
-        "Ohio",
-        "Oklahoma",
-        "Oregon",
-        "Pennsylvania",
-        "Rhode Island",
-        "South Carolina",
-        "South Dakota",
-        "Tennessee",
-        "Texas",
-        "Utah",
-        "Vermont",
-        "Virginia",
-        "Washington",
-        "West Virginia",
-        "Wisconsin",
-        "Wyoming"
+        "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+        "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
+        "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana",
+        "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+        "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
+        "New Hampshire", "New Jersey", "New Mexico", "New York",
+        "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon",
+        "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+        "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
+        "West Virginia", "Wisconsin", "Wyoming"
     ]
 
     selected_state = st.selectbox(
@@ -528,10 +390,6 @@ elif st.session_state.screen == "start_round":
         states,
         index=16
     )
-
-    # =====================================================
-    # COURSE SEARCH
-    # =====================================================
 
     search_course = st.text_input(
         "COURSE SEARCH",
@@ -555,7 +413,6 @@ elif st.session_state.screen == "start_round":
     filtered_matches = []
 
     for course in api_matches:
-
         course_state = course.get("state", "")
 
         if course_state == selected_state:
@@ -576,11 +433,9 @@ elif st.session_state.screen == "start_round":
     )
 
     selected_course_index = match_labels.index(selected_course_label)
-
     selected_course = filtered_matches[selected_course_index]
 
     course_id = selected_course.get("id")
-
     course_details = api_get_course_details(course_id)
 
     tee_options = get_tee_options(course_details)
@@ -596,24 +451,16 @@ elif st.session_state.screen == "start_round":
     )
 
     selected_tee_index = tee_labels.index(selected_tee_label)
-
     selected_tee = tee_options[selected_tee_index]["tee"]
 
     tee_holes = get_holes_from_tee(selected_tee)
 
     st.success("Course loaded successfully.")
 
-    # =====================================================
-    # START ROUND BUTTON
-    # =====================================================
-
     if st.button("START ROUND"):
-
         st.session_state.round_date = round_date
         st.session_state.course = selected_course_label
         st.session_state.tee = selected_tee_label
         st.session_state.hole_data = tee_holes
-
         st.session_state.screen = "scorecard"
-
         st.rerun()
