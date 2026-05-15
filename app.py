@@ -15,10 +15,31 @@ st.set_page_config(
 VIDEO_FILE = "GolfIntro.mp4"
 API_BASE_URL = "https://api.golfcourseapi.com"
 
+US_STATES = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
+    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
+    "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
+    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
+    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN",
+    "Mississippi": "MS", "Missouri": "MO", "Montana": "MT", "Nebraska": "NE",
+    "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+    "New Mexico": "NM", "New York": "NY", "North Carolina": "NC",
+    "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK", "Oregon": "OR",
+    "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT",
+    "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
+    "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
+}
 
-@st.cache_data
+
+def get_api_key():
+    return st.secrets.get("GOLF_API_KEY", "") or st.secrets.get("GOLF_COURSE_API_KEY", "")
+
+
+@st.cache_data(show_spinner=False)
 def api_search_courses(search_query):
-    api_key = st.secrets.get("GOLF_API_KEY", "")
+    api_key = get_api_key()
 
     if not api_key:
         return []
@@ -34,15 +55,23 @@ def api_search_courses(search_query):
         if response.status_code != 200:
             return []
 
-        return response.json().get("courses", [])
+        data = response.json()
+
+        if isinstance(data, dict):
+            return data.get("courses", []) or data.get("data", []) or []
+
+        if isinstance(data, list):
+            return data
+
+        return []
 
     except Exception:
         return []
 
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def api_get_course_details(course_id):
-    api_key = st.secrets.get("GOLF_API_KEY", "")
+    api_key = get_api_key()
 
     if not api_key:
         return {}
@@ -63,24 +92,72 @@ def api_get_course_details(course_id):
         return {}
 
 
+@st.cache_data(show_spinner=False)
+def get_courses_for_state(state_name, state_abbrev):
+    all_results = []
+
+    for query in [state_name, state_abbrev]:
+        results = api_search_courses(query)
+        all_results.extend(results)
+
+    deduped = {}
+
+    for course in all_results:
+        course_id = course.get("id") or course.get("course_id")
+        if not course_id:
+            continue
+
+        course_state = get_course_state(course)
+
+        if course_state in [state_name.upper(), state_abbrev.upper()]:
+            deduped[course_id] = course
+
+    return list(deduped.values())
+
+
+def get_course_state(course):
+    state = course.get("state", "")
+
+    location = course.get("location", {})
+    if isinstance(location, dict):
+        state = state or location.get("state", "")
+
+    return str(state).upper().strip()
+
+
 def get_course_display_name(course):
-    club = course.get("club_name", "")
-    course_name = course.get("course_name", "")
+    name = (
+        course.get("course_name")
+        or course.get("name")
+        or course.get("club_name")
+        or "Unknown Course"
+    )
+
     city = course.get("city", "")
     state = course.get("state", "")
 
-    main_name = course_name or club or "Unknown Course"
+    location = course.get("location", {})
+    if isinstance(location, dict):
+        city = city or location.get("city", "")
+        state = state or location.get("state", "")
 
     if city and state:
-        return f"{main_name} — {city}, {state}"
+        return f"{name} — {city}, {state}"
+
     if state:
-        return f"{main_name} — {state}"
-    return main_name
+        return f"{name} — {state}"
+
+    return name
+
+
+def get_course_id(course):
+    return course.get("id") or course.get("course_id")
 
 
 def get_tee_options(course_details):
     tee_options = []
-    course_data = course_details.get("course", {})
+
+    course_data = course_details.get("course", course_details)
     tees = course_data.get("tees", {})
 
     if not isinstance(tees, dict):
@@ -95,11 +172,22 @@ def get_tee_options(course_details):
         for tee in gender_tees:
             tee_name = tee.get("tee_name", "Unnamed Tee")
             total_yards = tee.get("total_yards", "")
+            rating = tee.get("course_rating", "")
+            slope = tee.get("slope_rating", "")
 
-            label = f"{tee_name} • {total_yards} YDS • {gender.title()}"
+            label_parts = [tee_name]
+
+            if total_yards:
+                label_parts.append(f"{total_yards} YDS")
+            if rating:
+                label_parts.append(f"Rating {rating}")
+            if slope:
+                label_parts.append(f"Slope {slope}")
+
+            label_parts.append(gender.title())
 
             tee_options.append({
-                "label": label,
+                "label": " • ".join(label_parts),
                 "tee": tee
             })
 
@@ -110,11 +198,21 @@ def get_holes_from_tee(tee):
     clean_holes = []
 
     for index, hole in enumerate(tee.get("holes", []), start=1):
+        try:
+            par = int(hole.get("par", 4))
+        except Exception:
+            par = 4
+
+        try:
+            yards = int(hole.get("yards") or hole.get("yardage") or 0)
+        except Exception:
+            yards = 0
+
         clean_holes.append({
             "hole": index,
-            "par": int(hole.get("par", 4)),
-            "yards": int(hole.get("yards", 0)),
-            "handicap": hole.get("handicap", "")
+            "par": par,
+            "yards": yards,
+            "handicap": hole.get("handicap") or hole.get("hcp") or ""
         })
 
     return clean_holes
@@ -220,34 +318,6 @@ label {
     font-size: 28px !important;
 }
 
-/* COURSE SEARCH FIX */
-.stTextInput div[data-baseweb="input"] {
-    background-color: #242533 !important;
-    border-radius: 14px !important;
-    min-height: 74px !important;
-    height: 74px !important;
-    display: flex !important;
-    align-items: center !important;
-}
-
-.stTextInput input {
-    background-color: transparent !important;
-    color: white !important;
-    font-size: 28px !important;
-    height: 74px !important;
-    min-height: 74px !important;
-    line-height: normal !important;
-    padding-top: 0px !important;
-    padding-bottom: 0px !important;
-    display: flex !important;
-    align-items: center !important;
-}
-
-.stTextInput input::placeholder {
-    font-size: 28px !important;
-    opacity: 0.7 !important;
-}
-
 .stButton > button {
     background-color: #5BE06C !important;
     color: black !important;
@@ -288,28 +358,6 @@ div[data-testid="stAlert"] {
     }
 
     .stSelectbox span {
-        font-size: 22px !important;
-    }
-
-    .stTextInput div[data-baseweb="input"] {
-        min-height: 76px !important;
-        height: 76px !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-
-    .stTextInput input {
-        font-size: 22px !important;
-        height: 76px !important;
-        min-height: 76px !important;
-        line-height: normal !important;
-        padding-top: 0px !important;
-        padding-bottom: 0px !important;
-        padding-left: 24px !important;
-        padding-right: 16px !important;
-    }
-
-    .stTextInput input::placeholder {
         font-size: 22px !important;
     }
 
@@ -372,73 +420,61 @@ elif st.session_state.screen == "start_round":
     selected_date_index = formatted_dates.index(selected_date_label)
     round_date = upcoming_dates[selected_date_index]
 
-    states = [
-        "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
-        "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
-        "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana",
-        "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
-        "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
-        "New Hampshire", "New Jersey", "New Mexico", "New York",
-        "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon",
-        "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
-        "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
-        "West Virginia", "Wisconsin", "Wyoming"
-    ]
+    state_names = list(US_STATES.keys())
 
     selected_state = st.selectbox(
         "STATE",
-        states,
-        index=16
+        state_names,
+        index=state_names.index("Kentucky")
     )
 
-    search_course = st.text_input(
-        "COURSE SEARCH",
-        placeholder="Type course name..."
-    )
+    selected_state_abbrev = US_STATES[selected_state]
 
     st.markdown(
         """
         <div class='api-note'>
-        Course search, tee boxes and hole yardages are powered only by the Golf Course API.
+        Select a state, then choose a course from the list returned by the Golf Course API.
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    if search_course.strip() == "":
+    with st.spinner("Loading courses..."):
+        state_courses = get_courses_for_state(selected_state, selected_state_abbrev)
+
+    if not state_courses:
+        st.warning("No courses were returned for this state by the Golf Course API.")
         st.stop()
 
-    api_matches = api_search_courses(search_course)
-
-    filtered_matches = []
-
-    for course in api_matches:
-        course_state = course.get("state", "")
-
-        if course_state == selected_state:
-            filtered_matches.append(course)
-
-    if not filtered_matches:
-        st.warning("No matching courses found.")
-        st.stop()
-
-    match_labels = [
-        get_course_display_name(course)
-        for course in filtered_matches
-    ]
+    course_options = {
+        get_course_display_name(course): course
+        for course in sorted(state_courses, key=get_course_display_name)
+    }
 
     selected_course_label = st.selectbox(
-        "SELECT COURSE",
-        match_labels
+        "COURSE",
+        list(course_options.keys())
     )
 
-    selected_course_index = match_labels.index(selected_course_label)
-    selected_course = filtered_matches[selected_course_index]
+    selected_course = course_options[selected_course_label]
+    course_id = get_course_id(selected_course)
 
-    course_id = selected_course.get("id")
-    course_details = api_get_course_details(course_id)
+    if not course_id:
+        st.warning("This course does not include a usable course ID.")
+        st.stop()
+
+    with st.spinner("Loading tees..."):
+        course_details = api_get_course_details(course_id)
+
+    if not course_details:
+        st.warning("Could not load course details from the Golf Course API.")
+        st.stop()
 
     tee_options = get_tee_options(course_details)
+
+    if not tee_options:
+        st.warning("Course loaded, but no tee boxes were found.")
+        st.stop()
 
     tee_labels = [
         option["label"]
@@ -450,10 +486,12 @@ elif st.session_state.screen == "start_round":
         tee_labels
     )
 
-    selected_tee_index = tee_labels.index(selected_tee_label)
-    selected_tee = tee_options[selected_tee_index]["tee"]
-
+    selected_tee = tee_options[tee_labels.index(selected_tee_label)]["tee"]
     tee_holes = get_holes_from_tee(selected_tee)
+
+    if not tee_holes:
+        st.warning("Tee selected, but no hole-by-hole yardage data was found.")
+        st.stop()
 
     st.success("Course loaded successfully.")
 
