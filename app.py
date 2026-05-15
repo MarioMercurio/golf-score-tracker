@@ -19,6 +19,14 @@ PENALTY_IMAGES = {
     "DROP": "Penalty - Drop.png",
 }
 
+GASH_IMAGES = {
+    "DUFF": "Gash - Duff Chunk.png",
+    "HERO SHOT": "Gash - Hero Shot.png",
+    "MISREAD": "Gash - Misread.png",
+    "UNDER CLUB": "Gash - Under Club.png",
+    "BAD TARGET AREA": "Gash - Bad Target.png",
+}
+
 US_STATES = {
     "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
     "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
@@ -321,15 +329,6 @@ st.markdown("""
     margin-bottom: 20px;
 }
 
-.small-note {
-    color: red;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 900;
-    margin-top: -8px;
-    margin-bottom: 12px;
-}
-
 .summary-box {
     color: white;
     border: 2px solid #333;
@@ -428,7 +427,7 @@ div[data-baseweb="select"] > div {
     box-shadow: 0 0 0 2px #4DDB68;
 }
 
-.penalty-grid {
+.tile-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 18px;
@@ -436,18 +435,18 @@ div[data-baseweb="select"] > div {
     margin-top: 20px;
 }
 
-.penalty-card {
+.stat-card {
     background: #191919;
 }
 
-.penalty-img {
+.stat-img {
     width: 100%;
     aspect-ratio: 1 / 1;
     object-fit: cover;
     display: block;
 }
 
-.penalty-value {
+.stat-value {
     color: white;
     text-align: center;
     font-size: 82px;
@@ -456,13 +455,13 @@ div[data-baseweb="select"] > div {
     padding: 28px 0 18px 0;
 }
 
-.penalty-controls {
+.stat-controls {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0;
 }
 
-.penalty-btn {
+.stat-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -474,7 +473,7 @@ div[data-baseweb="select"] > div {
     font-weight: 1000;
 }
 
-.penalty-btn.minus {
+.stat-btn.minus {
     background: #333333;
 }
 
@@ -559,17 +558,17 @@ div[data-baseweb="select"] > div {
         margin-bottom: 10px;
     }
 
-    .penalty-grid {
+    .tile-grid {
         gap: 5px;
         margin-top: 12px;
     }
 
-    .penalty-value {
+    .stat-value {
         font-size: 34px;
         padding: 14px 0 10px 0;
     }
 
-    .penalty-btn {
+    .stat-btn {
         height: 32px;
         font-size: 22px;
     }
@@ -620,19 +619,19 @@ def process_query_params(hole_num):
         except Exception:
             st.query_params.clear()
 
-    if "penalty_change" in st.query_params:
-        raw = st.query_params.get("penalty_change", "")
+    if "stat_change" in st.query_params:
+        raw = st.query_params.get("stat_change", "")
         try:
             decoded = unquote(raw)
-            selected_hole, hazard, direction = decoded.split("||")
+            selected_hole, group, key, direction = decoded.split("||")
             selected_hole = int(selected_hole)
             if selected_hole == hole_num:
-                current = int(st.session_state.round_entries[hole_num]["hazards"][hazard])
+                current = int(st.session_state.round_entries[hole_num][group][key])
                 if direction == "plus":
                     current += 1
                 elif direction == "minus":
                     current = max(0, current - 1)
-                set_nested_value(hole_num, "hazards", hazard, current)
+                set_nested_value(hole_num, group, key, current)
             st.query_params.clear()
             st.rerun()
         except Exception:
@@ -688,33 +687,33 @@ def render_tee_shot_grid(hole_num, entry):
     )
 
 
-def render_penalty_grid(hole_num, entry):
+def render_image_stat_grid(title, items, images, group, hole_num, entry):
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>PENALTIES / HAZARDS</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='section-title'>{title}</div>", unsafe_allow_html=True)
 
-    html_parts = ["<div class='penalty-grid'>"]
+    html_parts = ["<div class='tile-grid'>"]
 
-    for hazard in HAZARDS:
-        image_file = PENALTY_IMAGES.get(hazard, "")
+    for item in items:
+        image_file = images.get(item, "")
         image_b64 = local_image_base64(image_file)
 
-        minus_payload = quote(f"{hole_num}||{hazard}||minus")
-        plus_payload = quote(f"{hole_num}||{hazard}||plus")
-        value = int(entry["hazards"][hazard])
+        minus_payload = quote(f"{hole_num}||{group}||{item}||minus")
+        plus_payload = quote(f"{hole_num}||{group}||{item}||plus")
+        value = int(entry[group][item])
 
         img_html = (
-            f"<img class='penalty-img' src='data:image/png;base64,{image_b64}'>"
+            f"<img class='stat-img' src='data:image/png;base64,{image_b64}'>"
             if image_b64 else
-            f"<div class='penalty-img' style='background:#333;color:white;display:flex;align-items:center;justify-content:center;font-weight:900;'>{hazard}</div>"
+            f"<div class='stat-img' style='background:#333;color:white;display:flex;align-items:center;justify-content:center;font-weight:900;'>{item}</div>"
         )
 
         html_parts.append(
-            f"<div class='penalty-card'>"
+            f"<div class='stat-card'>"
             f"{img_html}"
-            f"<div class='penalty-value'>{value}</div>"
-            f"<div class='penalty-controls'>"
-            f"<a class='penalty-btn minus' href='?penalty_change={minus_payload}'>−</a>"
-            f"<a class='penalty-btn' href='?penalty_change={plus_payload}'>+</a>"
+            f"<div class='stat-value'>{value}</div>"
+            f"<div class='stat-controls'>"
+            f"<a class='stat-btn minus' href='?stat_change={minus_payload}'>−</a>"
+            f"<a class='stat-btn' href='?stat_change={plus_payload}'>+</a>"
             f"</div>"
             f"</div>"
         )
@@ -907,7 +906,15 @@ elif st.session_state.screen == "scorecard":
     set_value(hole_num, "putts", putts)
 
     render_tee_shot_grid(hole_num, entry)
-    render_penalty_grid(hole_num, entry)
+
+    render_image_stat_grid(
+        title="PENALTIES / HAZARDS",
+        items=HAZARDS,
+        images=PENALTY_IMAGES,
+        group="hazards",
+        hole_num=hole_num,
+        entry=entry
+    )
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>SCORING ZONE</div>", unsafe_allow_html=True)
@@ -927,25 +934,14 @@ elif st.session_state.screen == "scorecard":
     )
     set_value(hole_num, "inside_100_in_3", inside_answer)
 
-    st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>GASHES</div>", unsafe_allow_html=True)
-
-    for gash in GASHES:
-        st.markdown(
-            f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{gash}</div>",
-            unsafe_allow_html=True
-        )
-        value = st.number_input(
-            gash,
-            min_value=0,
-            max_value=10,
-            value=int(entry["gashes"][gash]),
-            step=1,
-            key=f"gash_{hole_num}_{gash}",
-            label_visibility="collapsed"
-        )
-        set_nested_value(hole_num, "gashes", gash, value)
-        st.markdown("<div class='small-note'>DEFAULT IS 0</div>", unsafe_allow_html=True)
+    render_image_stat_grid(
+        title="GASHES",
+        items=GASHES,
+        images=GASH_IMAGES,
+        group="gashes",
+        hole_num=hole_num,
+        entry=entry
+    )
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
 
