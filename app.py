@@ -349,26 +349,70 @@ st.markdown("""
     margin-bottom: 40px;
 }
 
-.hole-header {
+.compact-hole-card {
     background: #4DDB68;
+    margin-top: 14px;
+    margin-bottom: 18px;
+    padding: 18px 18px 16px 18px;
+}
+
+.compact-hole-title {
     color: white;
-    font-size: 58px;
+    font-size: 56px;
     font-weight: 1000;
     text-align: center;
-    padding: 18px;
-    margin-bottom: 18px;
+    line-height: 1;
+    margin-bottom: 14px;
 }
 
-.hole-meta {
+.compact-hole-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.compact-hole-meta-box {
+    background: black;
     color: white;
-    font-size: 28px;
-    font-weight: 900;
-    line-height: 1.5;
-    margin-bottom: 25px;
+    text-align: center;
+    padding: 10px 4px;
+    font-size: 20px;
+    font-weight: 1000;
 }
 
-.hole-meta span {
+.compact-hole-meta-box span {
     color: #ff3529;
+}
+
+.hole-nav-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 70px;
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 10px;
+}
+
+.hole-nav-btn {
+    background: #4DDB68;
+    color: white !important;
+    text-decoration: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 58px;
+    font-size: 30px;
+    font-weight: 1000;
+}
+
+.hole-nav-current {
+    background: #1f2028;
+    color: white;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 1000;
 }
 
 .big-label {
@@ -427,18 +471,6 @@ input {
     font-size: 22px !important;
     font-weight: 900 !important;
     width: 100% !important;
-}
-
-div[data-testid="stNumberInput"] button {
-    background-color: #2b2c34 !important;
-    color: white !important;
-    border-radius: 0px !important;
-}
-
-div[data-testid="stNumberInput"] input {
-    font-size: 30px !important;
-    font-weight: 800 !important;
-    min-height: 64px !important;
 }
 
 div[data-baseweb="select"] > div {
@@ -561,9 +593,9 @@ div[data-baseweb="select"] > div {
 
 @media (max-width: 768px) {
     .block-container {
-        padding-left: .4rem;
-        padding-right: .4rem;
-        padding-top: .5rem;
+        padding-left: .45rem;
+        padding-right: .45rem;
+        padding-top: .35rem;
         max-width: 100%;
     }
 
@@ -572,15 +604,42 @@ div[data-baseweb="select"] > div {
         margin-bottom: 24px;
     }
 
-    .hole-header {
-        font-size: 42px;
-        padding: 14px 8px;
-        margin-bottom: 16px;
+    .hole-nav-row {
+        grid-template-columns: 46px 1fr 46px;
+        gap: 6px;
+        margin-top: 0px;
+        margin-bottom: 8px;
     }
 
-    .hole-meta {
-        font-size: 28px;
-        margin-bottom: 16px;
+    .hole-nav-btn {
+        height: 42px;
+        font-size: 20px;
+    }
+
+    .hole-nav-current {
+        height: 42px;
+        font-size: 20px;
+    }
+
+    .compact-hole-card {
+        margin-top: 8px;
+        margin-bottom: 12px;
+        padding: 13px 10px 10px 10px;
+    }
+
+    .compact-hole-title {
+        font-size: 42px;
+        margin-bottom: 10px;
+    }
+
+    .compact-hole-meta {
+        gap: 5px;
+    }
+
+    .compact-hole-meta-box {
+        padding: 7px 2px;
+        font-size: 13px;
+        line-height: 1.05;
     }
 
     .big-label {
@@ -647,7 +706,7 @@ div[data-baseweb="select"] > div {
 
     .main-tile-grid {
         gap: 10px;
-        margin-top: 16px;
+        margin-top: 14px;
         margin-bottom: 6px;
     }
 
@@ -659,11 +718,6 @@ div[data-baseweb="select"] > div {
     .stat-btn {
         height: 32px;
         font-size: 22px;
-    }
-
-    div[data-testid="stNumberInput"] input {
-        min-height: 54px !important;
-        font-size: 24px !important;
     }
 
     div[data-baseweb="select"] > div {
@@ -696,6 +750,30 @@ def autoplay_video(video_path):
 
 
 def process_query_params(hole_num):
+    if "hole_nav" in st.query_params:
+        raw = st.query_params.get("hole_nav", "")
+
+        try:
+            decoded = unquote(raw)
+            hole_data = st.session_state.hole_data
+            current_index = st.session_state.current_hole_index
+
+            if decoded == "prev":
+                st.session_state.current_hole_index = max(0, current_index - 1)
+            elif decoded == "next":
+                st.session_state.current_hole_index = min(len(hole_data) - 1, current_index + 1)
+            else:
+                target_hole = int(decoded)
+                hole_numbers = [hole["hole"] for hole in hole_data]
+                if target_hole in hole_numbers:
+                    st.session_state.current_hole_index = hole_numbers.index(target_hole)
+
+            st.query_params.clear()
+            st.rerun()
+
+        except Exception:
+            st.query_params.clear()
+
     if "tee_choice" in st.query_params:
         raw = st.query_params.get("tee_choice", "")
 
@@ -744,6 +822,31 @@ def process_query_params(hole_num):
 
         except Exception:
             st.query_params.clear()
+
+
+def render_compact_hole_header(hole_num, entry):
+    prev_payload = quote("prev")
+    next_payload = quote("next")
+
+    st.markdown(
+        f"""
+        <div class="hole-nav-row">
+            <a class="hole-nav-btn" href="?hole_nav={prev_payload}">◀</a>
+            <div class="hole-nav-current">HOLE {hole_num}</div>
+            <a class="hole-nav-btn" href="?hole_nav={next_payload}">▶</a>
+        </div>
+
+        <div class="compact-hole-card">
+            <div class="compact-hole-title">HOLE {hole_num}</div>
+            <div class="compact-hole-meta">
+                <div class="compact-hole-meta-box">PAR<br><span>{entry['par']}</span></div>
+                <div class="compact-hole-meta-box">YARDS<br><span>{entry['yards']}</span></div>
+                <div class="compact-hole-meta-box">HDCP<br><span>{entry['handicap']}</span></div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 def render_tee_shot_grid(hole_num, entry):
@@ -997,44 +1100,7 @@ elif st.session_state.screen == "scorecard":
 
     process_query_params(hole_num)
 
-    nav_left, nav_mid, nav_right = st.columns([1, 1.2, 1])
-
-    with nav_left:
-        if st.button("◀") and current_index > 0:
-            st.session_state.current_hole_index -= 1
-            st.rerun()
-
-    with nav_mid:
-        selected_hole = st.selectbox(
-            "HOLE",
-            [hole["hole"] for hole in hole_data],
-            index=current_index,
-            label_visibility="collapsed"
-        )
-
-        new_index = [hole["hole"] for hole in hole_data].index(selected_hole)
-
-        if new_index != current_index:
-            st.session_state.current_hole_index = new_index
-            st.rerun()
-
-    with nav_right:
-        if st.button("▶") and current_index < len(hole_data) - 1:
-            st.session_state.current_hole_index += 1
-            st.rerun()
-
-    st.markdown(f"<div class='hole-header'>HOLE {hole_num}</div>", unsafe_allow_html=True)
-
-    st.markdown(
-        f"""
-        <div class='hole-meta'>
-        PAR: <span>{entry['par']}</span><br>
-        YARDS: <span>{entry['yards']}</span><br>
-        HANDICAP: <span>{entry['handicap']}</span>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    render_compact_hole_header(hole_num, entry)
 
     render_main_stat_tiles(hole_num, entry)
 
