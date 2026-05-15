@@ -1,56 +1,32 @@
 import base64
 from datetime import date
 from pathlib import Path
-
 import requests
 import streamlit as st
 
-st.set_page_config(
-    page_title="GOLF",
-    page_icon="⛳",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="GOLF", page_icon="⛳", layout="wide", initial_sidebar_state="collapsed")
 
 VIDEO_FILE = "GolfIntro.mp4"
 API_BASE_URL = "https://api.golfcourseapi.com"
 
 US_STATES = {
-    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
-    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
-    "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
-    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
-    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
-    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN",
-    "Mississippi": "MS", "Missouri": "MO", "Montana": "MT", "Nebraska": "NE",
-    "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
-    "New Mexico": "NM", "New York": "NY", "North Carolina": "NC",
-    "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK", "Oregon": "OR",
-    "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
-    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT",
-    "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
-    "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
+    "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
+    "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+    "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS",
+    "Missouri": "MO", "Montana": "MT", "Nebraska": "NE", "Nevada": "NV",
+    "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY",
+    "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK",
+    "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT",
+    "Virginia": "VA", "Washington": "WA", "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
 }
 
 CLUBS = ["DR", "3W", "5W", "HYB", "4I", "5I", "6I", "7I", "8I", "9I", "PW", "GW", "SW", "LW"]
-
 TEE_LOCATIONS = ["LOST LEFT", "LEFT", "CENTER", "RIGHT", "LOST RIGHT"]
-
-TEE_QUALITIES_PAR_3 = [
-    "TOO LONG",
-    "LITTLE LONG",
-    "PERFECT",
-    "LITTLE SHORT",
-    "MIS-HIT SHORT"
-]
-
-TEE_QUALITIES_PAR_4_5 = [
-    "TOO LONG",
-    "CRUSHED",
-    "AVERAGE",
-    "MIS-HIT SHORT"
-]
-
+TEE_QUALITIES_PAR_3 = ["TOO LONG", "LITTLE LONG", "PERFECT", "LITTLE SHORT", "MIS-HIT SHORT"]
+TEE_QUALITIES_PAR_4_5 = ["TOO LONG", "CRUSHED", "AVERAGE", "MIS-HIT SHORT"]
 HAZARDS = ["OB", "GREEN BUNKER", "FAIRWAY BUNKER", "WATER", "DROP"]
 GASHES = ["DUFF", "HERO SHOT", "MISREAD", "UNDER CLUB", "BAD TARGET AREA"]
 
@@ -64,21 +40,17 @@ def api_search_courses(search_query):
     api_key = get_api_key()
     if not api_key:
         return []
-
     try:
-        response = requests.get(
+        r = requests.get(
             f"{API_BASE_URL}/v1/search",
             headers={"Authorization": f"Key {api_key}"},
             params={"search_query": search_query},
             timeout=20
         )
-
-        if response.status_code != 200:
+        if r.status_code != 200:
             return []
-
-        data = response.json()
+        data = r.json()
         return data.get("courses", []) if isinstance(data, dict) else []
-
     except Exception:
         return []
 
@@ -88,19 +60,15 @@ def api_get_course_details(course_id):
     api_key = get_api_key()
     if not api_key:
         return {}
-
     try:
-        response = requests.get(
+        r = requests.get(
             f"{API_BASE_URL}/v1/courses/{course_id}",
             headers={"Authorization": f"Key {api_key}"},
             timeout=20
         )
-
-        if response.status_code != 200:
+        if r.status_code != 200:
             return {}
-
-        return response.json()
-
+        return r.json()
     except Exception:
         return {}
 
@@ -109,12 +77,10 @@ def get_course_display_name(course):
     name = course.get("course_name") or course.get("name") or course.get("club_name") or "Unknown Course"
     city = course.get("city", "")
     state = course.get("state", "")
-
     location = course.get("location", {})
     if isinstance(location, dict):
         city = city or location.get("city", "")
         state = state or location.get("state", "")
-
     if city and state:
         return f"{name} — {city}, {state}"
     if state:
@@ -168,45 +134,35 @@ def get_tee_options(course_details):
 
 
 def get_holes_from_tee(tee):
-    holes = tee.get("holes", [])
     clean_holes = []
-
-    for index, hole in enumerate(holes, start=1):
+    for index, hole in enumerate(tee.get("holes", []), start=1):
         try:
             par = int(hole.get("par", 4))
         except Exception:
             par = 4
-
         try:
             yards = int(hole.get("yards") or hole.get("yardage") or 0)
         except Exception:
             yards = 0
-
         clean_holes.append({
             "hole": index,
             "par": par,
             "yards": yards,
             "handicap": hole.get("handicap") or hole.get("hcp") or ""
         })
-
     return clean_holes
 
 
 def get_tee_quality_options(par):
-    if int(par) == 3:
-        return TEE_QUALITIES_PAR_3
-    return TEE_QUALITIES_PAR_4_5
+    return TEE_QUALITIES_PAR_3 if int(par) == 3 else TEE_QUALITIES_PAR_4_5
 
 
 def get_default_tee_quality(par):
-    if int(par) == 3:
-        return "PERFECT"
-    return "AVERAGE"
+    return "PERFECT" if int(par) == 3 else "AVERAGE"
 
 
 def default_hole_entry(hole_info):
     par = hole_info["par"]
-
     return {
         "hole": hole_info["hole"],
         "par": par,
@@ -225,11 +181,8 @@ def default_hole_entry(hole_info):
 
 def init_round_entries():
     st.session_state.round_entries = {}
-
     for hole_info in st.session_state.hole_data:
-        hole_num = hole_info["hole"]
-        st.session_state.round_entries[hole_num] = default_hole_entry(hole_info)
-
+        st.session_state.round_entries[hole_info["hole"]] = default_hole_entry(hole_info)
     st.session_state.current_hole_index = 0
 
 
@@ -243,17 +196,16 @@ def set_nested_value(hole_num, group, key, value):
 
 st.markdown("""
 <style>
-#MainMenu, footer, header {
-    visibility: hidden;
-}
+#MainMenu, footer, header {visibility: hidden;}
+.stApp {background-color: black;}
+.block-container {padding-top: 1rem; max-width: 1100px;}
 
-.stApp {
-    background-color: black;
-}
-
-.block-container {
-    padding-top: 1rem;
-    max-width: 1100px;
+.start-title {
+    text-align: center;
+    color: #4DDB68;
+    font-size: 72px;
+    font-weight: 900;
+    margin-bottom: 40px;
 }
 
 .video-wrap {
@@ -267,14 +219,6 @@ st.markdown("""
     width: 100%;
     max-width: 760px;
     border: 2px solid #111111;
-}
-
-.start-title {
-    text-align: center;
-    color: #4DDB68;
-    font-size: 72px;
-    font-weight: 900;
-    margin-bottom: 40px;
 }
 
 .hole-header {
@@ -295,9 +239,7 @@ st.markdown("""
     margin-bottom: 25px;
 }
 
-.hole-meta span {
-    color: #ff3529;
-}
+.hole-meta span {color: #ff3529;}
 
 .big-label {
     color: white;
@@ -351,9 +293,7 @@ label {
     font-size: 18px !important;
 }
 
-input {
-    color: white !important;
-}
+input {color: white !important;}
 
 .stButton > button {
     background-color: #4DDB68 !important;
@@ -383,16 +323,12 @@ div[data-baseweb="select"] > div {
     font-size: 22px !important;
 }
 
-.tee-grid-wrap {
-    margin-top: 8px;
-}
-
 .tee-grid-heading {
     color: yellow;
     text-align: center;
     font-size: 22px;
     font-weight: 1000;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .tee-selected-note {
@@ -414,70 +350,96 @@ div[data-baseweb="select"] > div {
 
 @media (max-width: 768px) {
     .block-container {
-        padding-left: .65rem;
-        padding-right: .65rem;
+        padding-left: .4rem;
+        padding-right: .4rem;
         padding-top: .5rem;
         max-width: 100%;
     }
 
     .start-title {
-        font-size: 48px;
-        margin-bottom: 28px;
+        font-size: 46px;
+        margin-bottom: 24px;
     }
 
     .hole-header {
-        font-size: 46px;
-        padding: 18px 10px;
-        margin-top: 4px;
-        margin-bottom: 20px;
+        font-size: 42px;
+        padding: 14px 8px;
+        margin-bottom: 16px;
     }
 
     .hole-meta {
-        font-size: 30px;
-        margin-bottom: 20px;
+        font-size: 28px;
+        margin-bottom: 16px;
     }
 
     .big-label {
-        font-size: 44px;
-        margin-top: 16px;
-        margin-bottom: 0px;
+        font-size: 38px;
+        margin-top: 12px;
     }
 
     .section-title {
-        font-size: 48px;
-        line-height: 1.05;
-        margin-top: 24px;
-        margin-bottom: 22px;
+        font-size: 44px;
+        line-height: 1;
+        margin-top: 20px;
+        margin-bottom: 16px;
     }
 
     .white-line {
-        margin: 28px 0 20px 0;
+        margin: 24px 0 18px 0;
         border-top: 4px solid white;
     }
 
+    div[data-testid="stHorizontalBlock"] {
+        flex-direction: row !important;
+        gap: .25rem !important;
+        align-items: stretch !important;
+    }
+
+    div[data-testid="column"] {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: 1 1 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
     .stButton > button {
-        min-height: 58px !important;
-        font-size: 16px !important;
-        padding: 4px 2px !important;
-    }
-
-    div[data-testid="stNumberInput"] input {
-        min-height: 58px !important;
-        font-size: 26px !important;
-    }
-
-    div[data-baseweb="select"] > div {
-        min-height: 56px !important;
-        font-size: 22px !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        font-size: 9.5px !important;
+        font-weight: 1000 !important;
+        padding: 1px 1px !important;
+        line-height: 1.05 !important;
+        white-space: normal !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
     }
 
     .tee-grid-heading {
+        font-size: 9.5px;
+        line-height: 1;
+        margin-bottom: 3px;
+        min-height: 18px;
+    }
+
+    .tee-selected-note {
         font-size: 13px;
-        margin-bottom: 4px;
+        margin-top: 10px;
     }
 
     .tee-grid-caption {
-        font-size: 13px;
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+
+    div[data-testid="stNumberInput"] input {
+        min-height: 54px !important;
+        font-size: 24px !important;
+    }
+
+    div[data-baseweb="select"] > div {
+        min-height: 52px !important;
+        font-size: 20px !important;
     }
 }
 </style>
@@ -488,9 +450,7 @@ def autoplay_video(video_path):
     path = Path(video_path)
     if not path.exists():
         return
-
     encoded = base64.b64encode(path.read_bytes()).decode()
-
     st.markdown(
         f"""
         <div class="video-wrap">
@@ -513,16 +473,10 @@ def render_tee_shot_grid(hole_num, entry):
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>TEE SHOT</div>", unsafe_allow_html=True)
 
-    if par == 3:
-        st.markdown(
-            "<div class='tee-grid-caption'>PAR 3 TEE SHOT GRID</div>",
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
-            "<div class='tee-grid-caption'>PAR 4 / PAR 5 TEE SHOT GRID</div>",
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        f"<div class='tee-grid-caption'>{'PAR 3 TEE SHOT GRID' if par == 3 else 'PAR 4 / PAR 5 TEE SHOT GRID'}</div>",
+        unsafe_allow_html=True
+    )
 
     selected_club = st.selectbox(
         "CLUB",
@@ -534,21 +488,14 @@ def render_tee_shot_grid(hole_num, entry):
 
     st.markdown("<div class='big-label' style='font-size:34px;'>LOCATION:</div>", unsafe_allow_html=True)
 
-    location_cols = st.columns(5)
+    location_cols = st.columns(5, gap="small")
 
     for col_index, location in enumerate(TEE_LOCATIONS):
         with location_cols[col_index]:
-            st.markdown(
-                f"<div class='tee-grid-heading'>{location}</div>",
-                unsafe_allow_html=True
-            )
+            st.markdown(f"<div class='tee-grid-heading'>{location}</div>", unsafe_allow_html=True)
 
             for quality in quality_options:
-                is_selected = (
-                    entry["tee_location"] == location
-                    and entry["tee_quality"] == quality
-                )
-
+                is_selected = entry["tee_location"] == location and entry["tee_quality"] == quality
                 button_text = f"✓ {quality}" if is_selected else quality
 
                 if st.button(
@@ -561,11 +508,7 @@ def render_tee_shot_grid(hole_num, entry):
                     st.rerun()
 
     st.markdown(
-        f"""
-        <div class='tee-selected-note'>
-        SELECTED: {entry["tee_location"]} / {entry["tee_quality"]}
-        </div>
-        """,
+        f"<div class='tee-selected-note'>SELECTED: {entry['tee_location']} / {entry['tee_quality']}</div>",
         unsafe_allow_html=True
     )
 
@@ -597,11 +540,7 @@ elif st.session_state.screen == "start_round":
 
     selected_state = US_STATES[selected_state_name]
 
-    search_query = st.text_input(
-        "COURSE SEARCH",
-        value="",
-        placeholder="Type course name..."
-    )
+    search_query = st.text_input("COURSE SEARCH", value="", placeholder="Type course name...")
 
     st.markdown(
         "<div class='api-note'>Course search, tee boxes and hole yardages are powered only by the Golf Course API.</div>",
@@ -664,12 +603,7 @@ elif st.session_state.screen == "start_round":
     holes = st.selectbox("HOLES", [9, 18], index=1) if max_holes >= 18 else st.selectbox("HOLES", [max_holes])
 
     if st.button("START ROUND"):
-        clean_course_name = (
-            selected_match.get("course_name")
-            or selected_match.get("name")
-            or selected_match.get("club_name")
-            or selected_match_label
-        )
+        clean_course_name = selected_match.get("course_name") or selected_match.get("name") or selected_match.get("club_name") or selected_match_label
 
         st.session_state.course = clean_course_name
         st.session_state.api_course = selected_match_label
@@ -697,10 +631,9 @@ elif st.session_state.screen == "scorecard":
     nav_left, nav_mid, nav_right = st.columns([1, 1.2, 1])
 
     with nav_left:
-        if st.button("◀"):
-            if current_index > 0:
-                st.session_state.current_hole_index -= 1
-                st.rerun()
+        if st.button("◀") and current_index > 0:
+            st.session_state.current_hole_index -= 1
+            st.rerun()
 
     with nav_mid:
         selected_hole = st.selectbox(
@@ -709,17 +642,15 @@ elif st.session_state.screen == "scorecard":
             index=current_index,
             label_visibility="collapsed"
         )
-
         new_index = [h["hole"] for h in hole_data].index(selected_hole)
         if new_index != current_index:
             st.session_state.current_hole_index = new_index
             st.rerun()
 
     with nav_right:
-        if st.button("▶"):
-            if current_index < len(hole_data) - 1:
-                st.session_state.current_hole_index += 1
-                st.rerun()
+        if st.button("▶") and current_index < len(hole_data) - 1:
+            st.session_state.current_hole_index += 1
+            st.rerun()
 
     st.markdown(f"<div class='hole-header'>HOLE {hole_num}</div>", unsafe_allow_html=True)
 
@@ -735,27 +666,11 @@ elif st.session_state.screen == "scorecard":
     )
 
     st.markdown("<div class='big-label'>SCORE:</div>", unsafe_allow_html=True)
-    score = st.number_input(
-        "Score",
-        min_value=1,
-        max_value=20,
-        value=int(entry["score"]),
-        step=1,
-        key=f"score_{hole_num}",
-        label_visibility="collapsed"
-    )
+    score = st.number_input("Score", min_value=1, max_value=20, value=int(entry["score"]), step=1, key=f"score_{hole_num}", label_visibility="collapsed")
     set_value(hole_num, "score", score)
 
     st.markdown("<div class='big-label'>PUTTS:</div>", unsafe_allow_html=True)
-    putts = st.number_input(
-        "Putts",
-        min_value=0,
-        max_value=10,
-        value=int(entry["putts"]),
-        step=1,
-        key=f"putts_{hole_num}",
-        label_visibility="collapsed"
-    )
+    putts = st.number_input("Putts", min_value=0, max_value=10, value=int(entry["putts"]), step=1, key=f"putts_{hole_num}", label_visibility="collapsed")
     set_value(hole_num, "putts", putts)
 
     render_tee_shot_grid(hole_num, entry)
@@ -764,29 +679,15 @@ elif st.session_state.screen == "scorecard":
     st.markdown("<div class='section-title'>PENALTIES / HAZARDS</div>", unsafe_allow_html=True)
 
     for hazard in HAZARDS:
-        st.markdown(
-            f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{hazard}</div>",
-            unsafe_allow_html=True
-        )
-        value = st.number_input(
-            hazard,
-            min_value=0,
-            max_value=10,
-            value=int(entry["hazards"][hazard]),
-            step=1,
-            key=f"hazard_{hole_num}_{hazard}",
-            label_visibility="collapsed"
-        )
+        st.markdown(f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{hazard}</div>", unsafe_allow_html=True)
+        value = st.number_input(hazard, min_value=0, max_value=10, value=int(entry["hazards"][hazard]), step=1, key=f"hazard_{hole_num}_{hazard}", label_visibility="collapsed")
         set_nested_value(hole_num, "hazards", hazard, value)
         st.markdown("<div class='small-note'>DEFAULT IS 0</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>SCORING ZONE</div>", unsafe_allow_html=True)
 
-    st.markdown(
-        "<div class='big-label' style='font-size:30px;'>INSIDE 100 YARDS IN 3 SHOTS?</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown("<div class='big-label' style='font-size:30px;'>INSIDE 100 YARDS IN 3 SHOTS?</div>", unsafe_allow_html=True)
 
     inside_answer = st.radio(
         "INSIDE 100",
@@ -802,19 +703,8 @@ elif st.session_state.screen == "scorecard":
     st.markdown("<div class='section-title'>GASHES</div>", unsafe_allow_html=True)
 
     for gash in GASHES:
-        st.markdown(
-            f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{gash}</div>",
-            unsafe_allow_html=True
-        )
-        value = st.number_input(
-            gash,
-            min_value=0,
-            max_value=10,
-            value=int(entry["gashes"][gash]),
-            step=1,
-            key=f"gash_{hole_num}_{gash}",
-            label_visibility="collapsed"
-        )
+        st.markdown(f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{gash}</div>", unsafe_allow_html=True)
+        value = st.number_input(gash, min_value=0, max_value=10, value=int(entry["gashes"][gash]), step=1, key=f"gash_{hole_num}_{gash}", label_visibility="collapsed")
         set_nested_value(hole_num, "gashes", gash, value)
         st.markdown("<div class='small-note'>DEFAULT IS 0</div>", unsafe_allow_html=True)
 
@@ -837,7 +727,6 @@ elif st.session_state.screen == "round_summary":
     st.markdown("<div class='start-title'>ROUND SUMMARY</div>", unsafe_allow_html=True)
 
     entries = st.session_state.round_entries
-
     total_score = sum(v["score"] for v in entries.values())
     total_par = sum(v["par"] for v in entries.values())
     total_putts = sum(v["putts"] for v in entries.values())
