@@ -292,6 +292,15 @@ label {
     font-size: 16px;
     margin-bottom: 20px;
 }
+
+.debug-box {
+    background-color: #111111;
+    color: white;
+    border: 1px solid #4DDB68;
+    padding: 20px;
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -385,6 +394,11 @@ elif st.session_state.screen == "start_round":
         st.stop()
 
     course_details = api_get_course_details(course_id)
+
+    st.markdown("<div class='debug-box'>", unsafe_allow_html=True)
+    st.subheader("DEBUG: API COURSE DETAILS")
+    st.write(course_details)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if not course_details:
         st.warning("Could not load course details from API.")
