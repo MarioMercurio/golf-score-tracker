@@ -32,6 +32,13 @@ US_STATES = {
     "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
 }
 
+COURSE_SEARCH_SWEEP_TERMS = [
+    "golf", "club", "country club", "course", "links",
+    "national", "municipal", "park", "valley", "lake",
+    "hills", "ridge", "river", "creek", "woods", "meadows",
+    "a", "e", "i", "o", "u", "r", "s", "t", "n", "l"
+]
+
 
 def get_api_key():
     return st.secrets.get("GOLF_API_KEY", "") or st.secrets.get("GOLF_COURSE_API_KEY", "")
@@ -92,29 +99,6 @@ def api_get_course_details(course_id):
         return {}
 
 
-@st.cache_data(show_spinner=False)
-def get_courses_for_state(state_name, state_abbrev):
-    all_results = []
-
-    for query in [state_name, state_abbrev]:
-        results = api_search_courses(query)
-        all_results.extend(results)
-
-    deduped = {}
-
-    for course in all_results:
-        course_id = course.get("id") or course.get("course_id")
-        if not course_id:
-            continue
-
-        course_state = get_course_state(course)
-
-        if course_state in [state_name.upper(), state_abbrev.upper()]:
-            deduped[course_id] = course
-
-    return list(deduped.values())
-
-
 def get_course_state(course):
     state = course.get("state", "")
 
@@ -152,6 +136,32 @@ def get_course_display_name(course):
 
 def get_course_id(course):
     return course.get("id") or course.get("course_id")
+
+
+@st.cache_data(show_spinner=False)
+def get_courses_for_state(state_name, state_abbrev):
+    deduped = {}
+
+    search_terms = [state_name, state_abbrev] + COURSE_SEARCH_SWEEP_TERMS
+
+    for term in search_terms:
+        results = api_search_courses(term)
+
+        for course in results:
+            course_id = get_course_id(course)
+
+            if not course_id:
+                continue
+
+            course_state = get_course_state(course)
+
+            if course_state == state_abbrev.upper():
+                deduped[course_id] = course
+
+    return sorted(
+        list(deduped.values()),
+        key=lambda c: get_course_display_name(c).lower()
+    )
 
 
 def get_tee_options(course_details):
@@ -433,7 +443,7 @@ elif st.session_state.screen == "start_round":
     st.markdown(
         """
         <div class='api-note'>
-        Select a state, then choose a course from the list returned by the Golf Course API.
+        Select a state, then choose a course from the course list.
         </div>
         """,
         unsafe_allow_html=True
@@ -448,7 +458,7 @@ elif st.session_state.screen == "start_round":
 
     course_options = {
         get_course_display_name(course): course
-        for course in sorted(state_courses, key=get_course_display_name)
+        for course in state_courses
     }
 
     selected_course_label = st.selectbox(
