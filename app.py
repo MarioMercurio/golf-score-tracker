@@ -6,15 +6,18 @@ from urllib.parse import quote, unquote
 import requests
 import streamlit as st
 
-st.set_page_config(
-    page_title="GOLF",
-    page_icon="⛳",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="GOLF", page_icon="⛳", layout="wide", initial_sidebar_state="collapsed")
 
 VIDEO_FILE = "GolfIntro.mp4"
 API_BASE_URL = "https://api.golfcourseapi.com"
+
+PENALTY_IMAGES = {
+    "OB": "Penalty - OB.png",
+    "GREEN BUNKER": "Penalty - Green Bunker .png",
+    "FAIRWAY BUNKER": "Penalty - Fairway Bunker.png",
+    "WATER": "Penalty - Water.png",
+    "DROP": "Penalty - Drop.png",
+}
 
 US_STATES = {
     "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
@@ -35,22 +38,8 @@ US_STATES = {
 
 CLUBS = ["DR", "3W", "5W", "HYB", "4I", "5I", "6I", "7I", "8I", "9I", "PW", "GW", "SW", "LW"]
 TEE_LOCATIONS = ["LOST LEFT", "LEFT", "CENTER", "RIGHT", "LOST RIGHT"]
-
-TEE_QUALITIES_PAR_3 = [
-    "TOO LONG",
-    "LITTLE LONG",
-    "PERFECT",
-    "LITTLE SHORT",
-    "MIS-HIT SHORT"
-]
-
-TEE_QUALITIES_PAR_4_5 = [
-    "TOO LONG",
-    "CRUSHED",
-    "AVERAGE",
-    "MIS-HIT SHORT"
-]
-
+TEE_QUALITIES_PAR_3 = ["TOO LONG", "LITTLE LONG", "PERFECT", "LITTLE SHORT", "MIS-HIT SHORT"]
+TEE_QUALITIES_PAR_4_5 = ["TOO LONG", "CRUSHED", "AVERAGE", "MIS-HIT SHORT"]
 HAZARDS = ["OB", "GREEN BUNKER", "FAIRWAY BUNKER", "WATER", "DROP"]
 GASHES = ["DUFF", "HERO SHOT", "MISREAD", "UNDER CLUB", "BAD TARGET AREA"]
 
@@ -59,13 +48,20 @@ def get_api_key():
     return st.secrets.get("GOLF_API_KEY", "") or st.secrets.get("GOLF_COURSE_API_KEY", "")
 
 
+def local_image_base64(filename):
+    path = Path(filename)
+    if not path.exists():
+        path = Path("assets") / filename
+    if not path.exists():
+        return ""
+    return base64.b64encode(path.read_bytes()).decode()
+
+
 @st.cache_data(show_spinner=False)
 def api_search_courses(search_query):
     api_key = get_api_key()
-
     if not api_key:
         return []
-
     try:
         response = requests.get(
             f"{API_BASE_URL}/v1/search",
@@ -73,13 +69,10 @@ def api_search_courses(search_query):
             params={"search_query": search_query},
             timeout=20
         )
-
         if response.status_code != 200:
             return []
-
         data = response.json()
         return data.get("courses", []) if isinstance(data, dict) else []
-
     except Exception:
         return []
 
@@ -87,22 +80,17 @@ def api_search_courses(search_query):
 @st.cache_data(show_spinner=False)
 def api_get_course_details(course_id):
     api_key = get_api_key()
-
     if not api_key:
         return {}
-
     try:
         response = requests.get(
             f"{API_BASE_URL}/v1/courses/{course_id}",
             headers={"Authorization": f"Key {api_key}"},
             timeout=20
         )
-
         if response.status_code != 200:
             return {}
-
         return response.json()
-
     except Exception:
         return {}
 
@@ -111,12 +99,10 @@ def get_course_display_name(course):
     name = course.get("course_name") or course.get("name") or course.get("club_name") or "Unknown Course"
     city = course.get("city", "")
     state = course.get("state", "")
-
     location = course.get("location", {})
     if isinstance(location, dict):
         city = city or location.get("city", "")
         state = state or location.get("state", "")
-
     if city and state:
         return f"{name} — {city}, {state}"
     if state:
@@ -126,11 +112,9 @@ def get_course_display_name(course):
 
 def get_course_state(course):
     state = course.get("state", "")
-
     location = course.get("location", {})
     if isinstance(location, dict):
         state = state or location.get("state", "")
-
     return str(state).upper().strip()
 
 
@@ -146,7 +130,6 @@ def get_tee_options(course_details):
     tee_options = []
     course_data = course_details.get("course", course_details)
     tees = course_data.get("tees", {})
-
     if not isinstance(tees, dict):
         return tee_options
 
@@ -156,65 +139,48 @@ def get_tee_options(course_details):
             total_yards = tee.get("total_yards", "")
             rating = tee.get("course_rating", "")
             slope = tee.get("slope_rating", "")
-
             parts = [tee_name]
-
             if total_yards:
                 parts.append(f"{total_yards} yds")
             if rating:
                 parts.append(f"Rating {rating}")
             if slope:
                 parts.append(f"Slope {slope}")
-
             parts.append(gender.title())
-
-            tee_options.append({
-                "label": " • ".join(parts),
-                "tee": tee
-            })
-
+            tee_options.append({"label": " • ".join(parts), "tee": tee})
     return tee_options
 
 
 def get_holes_from_tee(tee):
     clean_holes = []
-
     for index, hole in enumerate(tee.get("holes", []), start=1):
         try:
             par = int(hole.get("par", 4))
         except Exception:
             par = 4
-
         try:
             yards = int(hole.get("yards") or hole.get("yardage") or 0)
         except Exception:
             yards = 0
-
         clean_holes.append({
             "hole": index,
             "par": par,
             "yards": yards,
             "handicap": hole.get("handicap") or hole.get("hcp") or ""
         })
-
     return clean_holes
 
 
 def get_tee_quality_options(par):
-    if int(par) == 3:
-        return TEE_QUALITIES_PAR_3
-    return TEE_QUALITIES_PAR_4_5
+    return TEE_QUALITIES_PAR_3 if int(par) == 3 else TEE_QUALITIES_PAR_4_5
 
 
 def get_default_tee_quality(par):
-    if int(par) == 3:
-        return "PERFECT"
-    return "AVERAGE"
+    return "PERFECT" if int(par) == 3 else "AVERAGE"
 
 
 def default_hole_entry(hole_info):
     par = hole_info["par"]
-
     return {
         "hole": hole_info["hole"],
         "par": par,
@@ -233,11 +199,8 @@ def default_hole_entry(hole_info):
 
 def init_round_entries():
     st.session_state.round_entries = {}
-
     for hole_info in st.session_state.hole_data:
-        hole_num = hole_info["hole"]
-        st.session_state.round_entries[hole_num] = default_hole_entry(hole_info)
-
+        st.session_state.round_entries[hole_info["hole"]] = default_hole_entry(hole_info)
     st.session_state.current_hole_index = 0
 
 
@@ -265,66 +228,30 @@ def tee_cell_color(par, location, quality):
         if quality == "TOO LONG":
             return dark_red
         if quality == "LITTLE LONG":
-            if lost:
-                return bright_red
-            if side:
-                return dark_green
-            if center:
-                return medium_green
+            return bright_red if lost else dark_green if side else medium_green
         if quality == "PERFECT":
-            if lost:
-                return bright_red
-            if side:
-                return medium_green
-            if center:
-                return perfect_green
+            return bright_red if lost else medium_green if side else perfect_green
         if quality == "LITTLE SHORT":
-            if lost:
-                return bright_red
-            if side:
-                return dark_green
-            if center:
-                return medium_green
+            return bright_red if lost else dark_green if side else medium_green
         if quality == "MIS-HIT SHORT":
             return dark_red
-
     else:
         if quality == "TOO LONG":
             return dark_red
         if quality == "CRUSHED":
-            if lost:
-                return bright_red
-            if side:
-                return medium_green
-            if center:
-                return perfect_green
+            return bright_red if lost else medium_green if side else perfect_green
         if quality == "AVERAGE":
-            if lost:
-                return bright_red
-            if side:
-                return dark_green
-            if center:
-                return light_green
+            return bright_red if lost else dark_green if side else light_green
         if quality == "MIS-HIT SHORT":
             return dark_red
-
     return "#4DDB68"
 
 
 st.markdown("""
 <style>
-#MainMenu, footer, header {
-    visibility: hidden;
-}
-
-.stApp {
-    background-color: black;
-}
-
-.block-container {
-    padding-top: 1rem;
-    max-width: 1100px;
-}
+#MainMenu, footer, header {visibility: hidden;}
+.stApp {background-color: black;}
+.block-container {padding-top: 1rem; max-width: 1100px;}
 
 .video-wrap {
     width: 100%;
@@ -332,7 +259,6 @@ st.markdown("""
     display: flex;
     justify-content: center;
 }
-
 .video-wrap video {
     width: 100%;
     max-width: 760px;
@@ -364,10 +290,7 @@ st.markdown("""
     line-height: 1.5;
     margin-bottom: 25px;
 }
-
-.hole-meta span {
-    color: #ff3529;
-}
+.hole-meta span {color: #ff3529;}
 
 .big-label {
     color: white;
@@ -421,9 +344,7 @@ label {
     font-size: 18px !important;
 }
 
-input {
-    color: white !important;
-}
+input {color: white !important;}
 
 .stButton > button {
     background-color: #4DDB68 !important;
@@ -507,6 +428,56 @@ div[data-baseweb="select"] > div {
     box-shadow: 0 0 0 2px #4DDB68;
 }
 
+.penalty-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 18px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.penalty-card {
+    background: #191919;
+}
+
+.penalty-img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
+}
+
+.penalty-value {
+    color: white;
+    text-align: center;
+    font-size: 82px;
+    font-weight: 1000;
+    line-height: 1;
+    padding: 28px 0 18px 0;
+}
+
+.penalty-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+}
+
+.penalty-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #4DDB68;
+    color: white !important;
+    text-decoration: none !important;
+    height: 48px;
+    font-size: 34px;
+    font-weight: 1000;
+}
+
+.penalty-btn.minus {
+    background: #333333;
+}
+
 @media (max-width: 768px) {
     .block-container {
         padding-left: .4rem;
@@ -537,7 +508,7 @@ div[data-baseweb="select"] > div {
     }
 
     .section-title {
-        font-size: 44px;
+        font-size: 42px;
         line-height: 1;
         margin-top: 20px;
         margin-bottom: 16px;
@@ -588,6 +559,21 @@ div[data-baseweb="select"] > div {
         margin-bottom: 10px;
     }
 
+    .penalty-grid {
+        gap: 5px;
+        margin-top: 12px;
+    }
+
+    .penalty-value {
+        font-size: 34px;
+        padding: 14px 0 10px 0;
+    }
+
+    .penalty-btn {
+        height: 32px;
+        font-size: 22px;
+    }
+
     div[data-testid="stNumberInput"] input {
         min-height: 54px !important;
         font-size: 24px !important;
@@ -604,12 +590,9 @@ div[data-baseweb="select"] > div {
 
 def autoplay_video(video_path):
     path = Path(video_path)
-
     if not path.exists():
         return
-
     encoded = base64.b64encode(path.read_bytes()).decode()
-
     st.markdown(
         f"""
         <div class="video-wrap">
@@ -622,26 +605,38 @@ def autoplay_video(video_path):
     )
 
 
-def process_tee_query_param(hole_num):
-    if "tee_choice" not in st.query_params:
-        return
+def process_query_params(hole_num):
+    if "tee_choice" in st.query_params:
+        raw = st.query_params.get("tee_choice", "")
+        try:
+            decoded = unquote(raw)
+            selected_hole, location, quality = decoded.split("||")
+            selected_hole = int(selected_hole)
+            if selected_hole == hole_num:
+                set_value(hole_num, "tee_location", location)
+                set_value(hole_num, "tee_quality", quality)
+            st.query_params.clear()
+            st.rerun()
+        except Exception:
+            st.query_params.clear()
 
-    raw = st.query_params.get("tee_choice", "")
-
-    try:
-        decoded = unquote(raw)
-        selected_hole, location, quality = decoded.split("||")
-        selected_hole = int(selected_hole)
-
-        if selected_hole == hole_num:
-            set_value(hole_num, "tee_location", location)
-            set_value(hole_num, "tee_quality", quality)
-
-        st.query_params.clear()
-        st.rerun()
-
-    except Exception:
-        st.query_params.clear()
+    if "penalty_change" in st.query_params:
+        raw = st.query_params.get("penalty_change", "")
+        try:
+            decoded = unquote(raw)
+            selected_hole, hazard, direction = decoded.split("||")
+            selected_hole = int(selected_hole)
+            if selected_hole == hole_num:
+                current = int(st.session_state.round_entries[hole_num]["hazards"][hazard])
+                if direction == "plus":
+                    current += 1
+                elif direction == "minus":
+                    current = max(0, current - 1)
+                set_nested_value(hole_num, "hazards", hazard, current)
+            st.query_params.clear()
+            st.rerun()
+        except Exception:
+            st.query_params.clear()
 
 
 def render_tee_shot_grid(hole_num, entry):
@@ -677,15 +672,9 @@ def render_tee_shot_grid(hole_num, entry):
             selected_class = "selected" if entry["tee_location"] == location and entry["tee_quality"] == quality else ""
             color = tee_cell_color(par, location, quality)
             payload = quote(f"{hole_num}||{location}||{quality}")
-
-            tile = (
-                f"<a class='tee-tile {selected_class}' "
-                f"style='background:{color};' "
-                f"href='?tee_choice={payload}'>"
-                f"{quality}</a>"
+            html_parts.append(
+                f"<a class='tee-tile {selected_class}' style='background:{color};' href='?tee_choice={payload}'>{quality}</a>"
             )
-
-            html_parts.append(tile)
 
         html_parts.append("</div>")
 
@@ -699,15 +688,49 @@ def render_tee_shot_grid(hole_num, entry):
     )
 
 
+def render_penalty_grid(hole_num, entry):
+    st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>PENALTIES / HAZARDS</div>", unsafe_allow_html=True)
+
+    html_parts = ["<div class='penalty-grid'>"]
+
+    for hazard in HAZARDS:
+        image_file = PENALTY_IMAGES.get(hazard, "")
+        image_b64 = local_image_base64(image_file)
+
+        minus_payload = quote(f"{hole_num}||{hazard}||minus")
+        plus_payload = quote(f"{hole_num}||{hazard}||plus")
+        value = int(entry["hazards"][hazard])
+
+        img_html = (
+            f"<img class='penalty-img' src='data:image/png;base64,{image_b64}'>"
+            if image_b64 else
+            f"<div class='penalty-img' style='background:#333;color:white;display:flex;align-items:center;justify-content:center;font-weight:900;'>{hazard}</div>"
+        )
+
+        html_parts.append(
+            f"<div class='penalty-card'>"
+            f"{img_html}"
+            f"<div class='penalty-value'>{value}</div>"
+            f"<div class='penalty-controls'>"
+            f"<a class='penalty-btn minus' href='?penalty_change={minus_payload}'>−</a>"
+            f"<a class='penalty-btn' href='?penalty_change={plus_payload}'>+</a>"
+            f"</div>"
+            f"</div>"
+        )
+
+    html_parts.append("</div>")
+
+    st.markdown("".join(html_parts), unsafe_allow_html=True)
+
+
 if "screen" not in st.session_state:
     st.session_state.screen = "home"
 
 
 if st.session_state.screen == "home":
     autoplay_video(VIDEO_FILE)
-
     col1, col2, col3 = st.columns([1, 2, 1])
-
     with col2:
         if st.button("PLAY GOLF"):
             st.session_state.screen = "start_round"
@@ -727,11 +750,7 @@ elif st.session_state.screen == "start_round":
 
     selected_state = US_STATES[selected_state_name]
 
-    search_query = st.text_input(
-        "COURSE SEARCH",
-        value="",
-        placeholder="Type course name..."
-    )
+    search_query = st.text_input("COURSE SEARCH", value="", placeholder="Type course name...")
 
     st.markdown(
         "<div class='api-note'>Course search, tee boxes and hole yardages are powered only by the Golf Course API.</div>",
@@ -791,11 +810,7 @@ elif st.session_state.screen == "start_round":
         st.stop()
 
     max_holes = len(tee_holes)
-
-    if max_holes >= 18:
-        holes = st.selectbox("HOLES", [9, 18], index=1)
-    else:
-        holes = st.selectbox("HOLES", [max_holes])
+    holes = st.selectbox("HOLES", [9, 18], index=1) if max_holes >= 18 else st.selectbox("HOLES", [max_holes])
 
     if st.button("START ROUND"):
         clean_course_name = (
@@ -828,7 +843,7 @@ elif st.session_state.screen == "scorecard":
     hole_num = hole_info["hole"]
     entry = st.session_state.round_entries[hole_num]
 
-    process_tee_query_param(hole_num)
+    process_query_params(hole_num)
 
     nav_left, nav_mid, nav_right = st.columns([1, 1.2, 1])
 
@@ -844,9 +859,7 @@ elif st.session_state.screen == "scorecard":
             index=current_index,
             label_visibility="collapsed"
         )
-
         new_index = [hole["hole"] for hole in hole_data].index(selected_hole)
-
         if new_index != current_index:
             st.session_state.current_hole_index = new_index
             st.rerun()
@@ -870,7 +883,6 @@ elif st.session_state.screen == "scorecard":
     )
 
     st.markdown("<div class='big-label'>SCORE:</div>", unsafe_allow_html=True)
-
     score = st.number_input(
         "Score",
         min_value=1,
@@ -880,11 +892,9 @@ elif st.session_state.screen == "scorecard":
         key=f"score_{hole_num}",
         label_visibility="collapsed"
     )
-
     set_value(hole_num, "score", score)
 
     st.markdown("<div class='big-label'>PUTTS:</div>", unsafe_allow_html=True)
-
     putts = st.number_input(
         "Putts",
         min_value=0,
@@ -894,33 +904,10 @@ elif st.session_state.screen == "scorecard":
         key=f"putts_{hole_num}",
         label_visibility="collapsed"
     )
-
     set_value(hole_num, "putts", putts)
 
     render_tee_shot_grid(hole_num, entry)
-
-    st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>PENALTIES / HAZARDS</div>", unsafe_allow_html=True)
-
-    for hazard in HAZARDS:
-        st.markdown(
-            f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{hazard}</div>",
-            unsafe_allow_html=True
-        )
-
-        value = st.number_input(
-            hazard,
-            min_value=0,
-            max_value=10,
-            value=int(entry["hazards"][hazard]),
-            step=1,
-            key=f"hazard_{hole_num}_{hazard}",
-            label_visibility="collapsed"
-        )
-
-        set_nested_value(hole_num, "hazards", hazard, value)
-
-        st.markdown("<div class='small-note'>DEFAULT IS 0</div>", unsafe_allow_html=True)
+    render_penalty_grid(hole_num, entry)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>SCORING ZONE</div>", unsafe_allow_html=True)
@@ -938,7 +925,6 @@ elif st.session_state.screen == "scorecard":
         key=f"inside_100_{hole_num}",
         label_visibility="collapsed"
     )
-
     set_value(hole_num, "inside_100_in_3", inside_answer)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
@@ -949,7 +935,6 @@ elif st.session_state.screen == "scorecard":
             f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{gash}</div>",
             unsafe_allow_html=True
         )
-
         value = st.number_input(
             gash,
             min_value=0,
@@ -959,9 +944,7 @@ elif st.session_state.screen == "scorecard":
             key=f"gash_{hole_num}_{gash}",
             label_visibility="collapsed"
         )
-
         set_nested_value(hole_num, "gashes", gash, value)
-
         st.markdown("<div class='small-note'>DEFAULT IS 0</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
