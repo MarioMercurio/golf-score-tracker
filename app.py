@@ -1,6 +1,8 @@
 import base64
 from datetime import date
 from pathlib import Path
+from urllib.parse import quote, unquote
+
 import requests
 import streamlit as st
 
@@ -194,6 +196,68 @@ def set_nested_value(hole_num, group, key, value):
     st.session_state.round_entries[hole_num][group][key] = value
 
 
+def tee_cell_color(par, location, quality):
+    dark_red = "#b00000"
+    bright_red = "#ff0900"
+    dark_green = "#007a3d"
+    medium_green = "#68c34a"
+    light_green = "#94c83d"
+    perfect_green = "#00ff00"
+
+    lost = location in ["LOST LEFT", "LOST RIGHT"]
+    side = location in ["LEFT", "RIGHT"]
+    center = location == "CENTER"
+
+    if int(par) == 3:
+        if quality == "TOO LONG":
+            return dark_red
+        if quality == "LITTLE LONG":
+            if lost:
+                return bright_red
+            if side:
+                return dark_green
+            if center:
+                return medium_green
+        if quality == "PERFECT":
+            if lost:
+                return bright_red
+            if side:
+                return medium_green
+            if center:
+                return perfect_green
+        if quality == "LITTLE SHORT":
+            if lost:
+                return bright_red
+            if side:
+                return dark_green
+            if center:
+                return medium_green
+        if quality == "MIS-HIT SHORT":
+            return dark_red
+
+    else:
+        if quality == "TOO LONG":
+            return dark_red
+        if quality == "CRUSHED":
+            if lost:
+                return bright_red
+            if side:
+                return medium_green
+            if center:
+                return perfect_green
+        if quality == "AVERAGE":
+            if lost:
+                return bright_red
+            if side:
+                return dark_green
+            if center:
+                return light_green
+        if quality == "MIS-HIT SHORT":
+            return dark_red
+
+    return "#4DDB68"
+
+
 st.markdown("""
 <style>
 #MainMenu, footer, header {visibility: hidden;}
@@ -323,12 +387,12 @@ div[data-baseweb="select"] > div {
     font-size: 22px !important;
 }
 
-.tee-grid-heading {
-    color: yellow;
+.tee-grid-caption {
+    color: #AAAAAA;
     text-align: center;
-    font-size: 22px;
-    font-weight: 1000;
-    margin-bottom: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 16px;
 }
 
 .tee-selected-note {
@@ -340,12 +404,41 @@ div[data-baseweb="select"] > div {
     margin-bottom: 8px;
 }
 
-.tee-grid-caption {
-    color: #AAAAAA;
+.tee-html-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.tee-col-title {
+    color: yellow;
     text-align: center;
-    font-size: 15px;
-    font-weight: 700;
-    margin-bottom: 16px;
+    font-size: 22px;
+    font-weight: 1000;
+    margin-bottom: 8px;
+}
+
+.tee-tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 58px;
+    margin-bottom: 8px;
+    text-decoration: none !important;
+    color: black !important;
+    font-size: 24px;
+    font-weight: 1000;
+    line-height: 1;
+    text-align: center;
+    border: 3px solid transparent;
+    box-sizing: border-box;
+}
+
+.tee-tile.selected {
+    border: 4px solid white;
+    box-shadow: 0 0 0 2px #4DDB68;
 }
 
 @media (max-width: 768px) {
@@ -389,37 +482,34 @@ div[data-baseweb="select"] > div {
         border-top: 4px solid white;
     }
 
-    div[data-testid="stHorizontalBlock"] {
-        flex-direction: row !important;
-        gap: .25rem !important;
-        align-items: stretch !important;
-    }
-
-    div[data-testid="column"] {
-        width: 100% !important;
-        min-width: 0 !important;
-        flex: 1 1 0 !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-    }
-
     .stButton > button {
-        min-height: 40px !important;
-        height: 40px !important;
-        font-size: 9.5px !important;
-        font-weight: 1000 !important;
-        padding: 1px 1px !important;
-        line-height: 1.05 !important;
-        white-space: normal !important;
-        overflow-wrap: normal !important;
-        word-break: normal !important;
+        min-height: 48px !important;
+        font-size: 16px !important;
     }
 
-    .tee-grid-heading {
+    .tee-html-grid {
+        gap: 4px;
+    }
+
+    .tee-col-title {
         font-size: 9.5px;
         line-height: 1;
-        margin-bottom: 3px;
+        margin-bottom: 4px;
         min-height: 18px;
+    }
+
+    .tee-tile {
+        height: 38px;
+        margin-bottom: 4px;
+        font-size: 8.7px;
+        border: 1px solid transparent;
+        padding: 0 1px;
+        letter-spacing: -0.2px;
+    }
+
+    .tee-tile.selected {
+        border: 2px solid white;
+        box-shadow: 0 0 0 1px #4DDB68;
     }
 
     .tee-selected-note {
@@ -463,6 +553,27 @@ def autoplay_video(video_path):
     )
 
 
+def process_tee_query_param(hole_num):
+    if "tee_choice" not in st.query_params:
+        return
+
+    raw = st.query_params.get("tee_choice", "")
+    try:
+        decoded = unquote(raw)
+        selected_hole, location, quality = decoded.split("||")
+        selected_hole = int(selected_hole)
+
+        if selected_hole == hole_num:
+            set_value(hole_num, "tee_location", location)
+            set_value(hole_num, "tee_quality", quality)
+
+        st.query_params.clear()
+        st.rerun()
+
+    except Exception:
+        st.query_params.clear()
+
+
 def render_tee_shot_grid(hole_num, entry):
     par = int(entry["par"])
     quality_options = get_tee_quality_options(par)
@@ -488,24 +599,30 @@ def render_tee_shot_grid(hole_num, entry):
 
     st.markdown("<div class='big-label' style='font-size:34px;'>LOCATION:</div>", unsafe_allow_html=True)
 
-    location_cols = st.columns(5, gap="small")
+    html = "<div class='tee-html-grid'>"
 
-    for col_index, location in enumerate(TEE_LOCATIONS):
-        with location_cols[col_index]:
-            st.markdown(f"<div class='tee-grid-heading'>{location}</div>", unsafe_allow_html=True)
+    for location in TEE_LOCATIONS:
+        html += "<div>"
+        html += f"<div class='tee-col-title'>{location}</div>"
 
-            for quality in quality_options:
-                is_selected = entry["tee_location"] == location and entry["tee_quality"] == quality
-                button_text = f"✓ {quality}" if is_selected else quality
+        for quality in quality_options:
+            selected_class = "selected" if entry["tee_location"] == location and entry["tee_quality"] == quality else ""
+            color = tee_cell_color(par, location, quality)
+            payload = quote(f"{hole_num}||{location}||{quality}")
 
-                if st.button(
-                    button_text,
-                    key=f"tee_grid_{hole_num}_{location}_{quality}",
-                    use_container_width=True
-                ):
-                    set_value(hole_num, "tee_location", location)
-                    set_value(hole_num, "tee_quality", quality)
-                    st.rerun()
+            html += f"""
+            <a class="tee-tile {selected_class}" 
+               style="background:{color};" 
+               href="?tee_choice={payload}">
+               {quality}
+            </a>
+            """
+
+        html += "</div>"
+
+    html += "</div>"
+
+    st.markdown(html, unsafe_allow_html=True)
 
     st.markdown(
         f"<div class='tee-selected-note'>SELECTED: {entry['tee_location']} / {entry['tee_quality']}</div>",
@@ -627,6 +744,8 @@ elif st.session_state.screen == "scorecard":
     hole_info = hole_data[current_index]
     hole_num = hole_info["hole"]
     entry = st.session_state.round_entries[hole_num]
+
+    process_tee_query_param(hole_num)
 
     nav_left, nav_mid, nav_right = st.columns([1, 1.2, 1])
 
