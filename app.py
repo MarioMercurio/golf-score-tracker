@@ -1,404 +1,352 @@
-import base64
-from datetime import date
-from pathlib import Path
-
-import pandas as pd
+import os
 import requests
+import pandas as pd
 import streamlit as st
 
+# =========================================================
+# CONFIG
+# =========================================================
+
 st.set_page_config(
-    page_title="GOLF",
+    page_title="Golf App",
     page_icon="⛳",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    layout="wide"
 )
 
-VIDEO_FILE = "GolfIntro.mp4"
-COURSE_CSV = "opengolfapi-us.csv"
-API_BASE_URL = "https://api.golfcourseapi.com"
+API_KEY = st.secrets.get("GOLF_COURSE_API_KEY", os.getenv("GOLF_COURSE_API_KEY", ""))
 
-@st.cache_data
-def load_local_courses():
-    if Path(COURSE_CSV).exists():
-        return pd.read_csv(COURSE_CSV)
-    if Path(f"data/{COURSE_CSV}").exists():
-        return pd.read_csv(f"data/{COURSE_CSV}")
-    return pd.DataFrame()
+BASE_URL = "https://api.golfcourseapi.com/v1"
 
-@st.cache_data
-def api_search_courses(search_query):
-    api_key = st.secrets.get("GOLF_API_KEY", "")
-    if not api_key:
-        return []
+HEADERS = {
+    "Authorization": f"Key {API_KEY}"
+}
 
-    headers = {"Authorization": f"Key {api_key}"}
-    params = {"search_query": search_query}
+US_STATES = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
+    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
+    "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
+    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
+    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN",
+    "Mississippi": "MS", "Missouri": "MO", "Montana": "MT", "Nebraska": "NE",
+    "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+    "New Mexico": "NM", "New York": "NY", "North Carolina": "NC",
+    "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK", "Oregon": "OR",
+    "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT",
+    "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
+    "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
+}
+
+# =========================================================
+# API HELPERS
+# =========================================================
+
+def api_get(endpoint, params=None):
+    if not API_KEY:
+        st.error("Missing Golf Course API key. Add GOLF_COURSE_API_KEY to Streamlit secrets.")
+        st.stop()
+
+    url = f"{BASE_URL}{endpoint}"
 
     try:
-        response = requests.get(
-            f"{API_BASE_URL}/v1/search",
-            headers=headers,
-            params=params,
-            timeout=20
-        )
-        if response.status_code != 200:
-            return []
-        return response.json().get("courses", [])
-    except Exception:
+        r = requests.get(url, headers=HEADERS, params=params, timeout=20)
+
+        if r.status_code != 200:
+            st.error(f"API Error {r.status_code}: {r.text}")
+            return None
+
+        return r.json()
+
+    except Exception as e:
+        st.error(f"API request failed: {e}")
+        return None
+
+
+@st.cache_data(show_spinner=False)
+def search_courses(query):
+    """
+    Searches Golf Course API.
+    """
+    data = api_get("/search", params={"search_query": query})
+
+    if not data:
         return []
 
-@st.cache_data
-def api_get_course_details(course_id):
-    api_key = st.secrets.get("GOLF_API_KEY", "")
-    if not api_key:
+    if isinstance(data, dict):
+        return data.get("courses", []) or data.get("data", []) or []
+
+    if isinstance(data, list):
+        return data
+
+    return []
+
+
+@st.cache_data(show_spinner=False)
+def get_course_details(course_id):
+    """
+    Gets full course details, including tees and yardages.
+    """
+    data = api_get(f"/courses/{course_id}")
+
+    if not data:
         return {}
 
-    headers = {"Authorization": f"Key {api_key}"}
+    if isinstance(data, dict):
+        return data.get("course", data)
 
-    try:
-        response = requests.get(
-            f"{API_BASE_URL}/v1/courses/{course_id}",
-            headers=headers,
-            timeout=20
-        )
-        if response.status_code != 200:
-            return {}
-        return response.json()
-    except Exception:
-        return {}
+    return {}
 
-def get_course_display_name(course):
-    club = course.get("club_name", "")
-    course_name = course.get("course_name", "")
-    city = course.get("city", "")
-    state = course.get("state", "")
 
-    main_name = course_name or club or "Unknown Course"
-
-    if city and state:
-        return f"{main_name} — {city}, {state}"
-    if state:
-        return f"{main_name} — {state}"
-    return main_name
-
-def get_tee_options(course_details):
-    tee_options = []
-
-    course_data = course_details.get("course", {})
-    tees = course_data.get("tees", {})
-
-    if not isinstance(tees, dict):
-        return tee_options
-
-    for gender in ["male", "female"]:
-        gender_tees = tees.get(gender, [])
-
-        if not isinstance(gender_tees, list):
-            continue
-
-        for tee in gender_tees:
-            tee_name = tee.get("tee_name", "Unnamed Tee")
-            total_yards = tee.get("total_yards", "")
-            rating = tee.get("course_rating", "")
-            slope = tee.get("slope_rating", "")
-
-            label_parts = [tee_name]
-
-            if total_yards:
-                label_parts.append(f"{total_yards} yds")
-            if rating:
-                label_parts.append(f"Rating {rating}")
-            if slope:
-                label_parts.append(f"Slope {slope}")
-
-            label_parts.append(gender.title())
-            label = " • ".join(label_parts)
-
-            tee_options.append({
-                "label": label,
-                "tee": tee,
-                "gender": gender
-            })
-
-    return tee_options
-
-def get_holes_from_tee(tee):
-    holes = tee.get("holes", [])
-    clean_holes = []
-
-    if not isinstance(holes, list):
-        return clean_holes
-
-    for index, hole in enumerate(holes, start=1):
-        par = hole.get("par", 4)
-        yards = hole.get("yards", 0)
-        handicap = hole.get("handicap", "")
-
-        try:
-            par = int(par)
-        except Exception:
-            par = 4
-
-        try:
-            yards = int(yards)
-        except Exception:
-            yards = 0
-
-        clean_holes.append({
-            "hole": index,
-            "par": par,
-            "yards": yards,
-            "handicap": handicap
-        })
-
-    return clean_holes
-
-local_df = load_local_courses()
-
-st.markdown("""
-<style>
-#MainMenu, footer, header {
-    visibility: hidden;
-}
-
-.stApp {
-    background-color: black;
-}
-
-.block-container {
-    padding-top: 1rem;
-    max-width: 950px;
-}
-
-.video-wrap {
-    width: 100%;
-    margin: 25px auto 70px auto;
-    display: flex;
-    justify-content: center;
-}
-
-.video-wrap video {
-    width: 100%;
-    max-width: 760px;
-    border: 2px solid #111111;
-}
-
-.start-title {
-    text-align: center;
-    color: #4DDB68;
-    font-size: 72px;
-    font-weight: 900;
-    margin-bottom: 40px;
-}
-
-.stButton > button {
-    background-color: #4DDB68 !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 0px !important;
-    height: 90px !important;
-    font-size: 34px !important;
-    font-weight: 900 !important;
-    width: 100% !important;
-}
-
-.hole-title {
-    color: white;
-    font-size: 28px;
-    font-weight: 900;
-    margin-top: 26px;
-}
-
-.tee-title {
-    text-align: center;
-    color: white;
-    font-size: 26px;
-    font-weight: 700;
-    margin-bottom: 35px;
-}
-
-label {
-    color: white !important;
-    font-weight: 700 !important;
-}
-
-.api-note {
-    color: #AAAAAA;
-    text-align: center;
-    font-size: 16px;
-    margin-bottom: 20px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-def autoplay_video(video_path):
-    path = Path(video_path)
-
-    if not path.exists():
-        return
-
-    video_bytes = path.read_bytes()
-    encoded = base64.b64encode(video_bytes).decode()
-
-    st.markdown(
-        f"""
-        <div class="video-wrap">
-            <video autoplay muted loop playsinline>
-                <source src="data:video/mp4;base64,{encoded}" type="video/mp4">
-            </video>
-        </div>
-        """,
-        unsafe_allow_html=True
+def normalize_course_name(course):
+    return (
+        course.get("course_name")
+        or course.get("name")
+        or course.get("club_name")
+        or "Unknown Course"
     )
 
-if "screen" not in st.session_state:
-    st.session_state.screen = "home"
 
-if st.session_state.screen == "home":
-    autoplay_video(VIDEO_FILE)
+def normalize_location(course):
+    location = course.get("location", {})
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    if isinstance(location, dict):
+        city = location.get("city", "")
+        state = location.get("state", "")
+        return f"{city}, {state}".strip(", ")
 
-    with col2:
-        if st.button("PLAY GOLF"):
-            st.session_state.screen = "start_round"
-            st.rerun()
+    return course.get("city", "")
 
-elif st.session_state.screen == "start_round":
-    st.markdown("<div class='start-title'>START ROUND</div>", unsafe_allow_html=True)
 
-    round_date = st.date_input("DATE", value=date.today())
+def get_course_id(course):
+    return course.get("id") or course.get("course_id")
 
-    if local_df.empty:
-        st.error("The local course file was not found.")
-        st.stop()
 
-    states = sorted(local_df["state"].dropna().unique())
-    selected_state = st.selectbox("STATE", states)
+def filter_courses_by_state(courses, state_abbrev):
+    filtered = []
 
-    state_df = local_df[local_df["state"] == selected_state]
-    course_names = sorted(state_df["name"].dropna().unique())
-    selected_course = st.selectbox("COURSE", course_names)
+    for course in courses:
+        location = course.get("location", {})
 
-    st.markdown(
-        "<div class='api-note'>The app is using the selected course name to search the Golf Course API for tee boxes and hole yardages.</div>",
-        unsafe_allow_html=True
+        state = ""
+        if isinstance(location, dict):
+            state = location.get("state", "")
+        else:
+            state = course.get("state", "")
+
+        if state and state.upper() == state_abbrev.upper():
+            filtered.append(course)
+
+    return filtered
+
+
+def extract_tees(course_details):
+    tees = []
+
+    raw_tees = (
+        course_details.get("tees")
+        or course_details.get("tee_boxes")
+        or course_details.get("teeSets")
+        or []
     )
 
-    api_matches = api_search_courses(selected_course)
+    if isinstance(raw_tees, dict):
+        for gender_group in raw_tees.values():
+            if isinstance(gender_group, list):
+                tees.extend(gender_group)
+    elif isinstance(raw_tees, list):
+        tees = raw_tees
 
-    if not api_matches:
-        st.warning("No API course match found. Try another course.")
-        st.stop()
+    return tees
 
-    api_match_labels = [get_course_display_name(course) for course in api_matches]
-    selected_match_label = st.selectbox("API COURSE MATCH", api_match_labels)
 
-    selected_match_index = api_match_labels.index(selected_match_label)
-    selected_match = api_matches[selected_match_index]
-
-    course_id = selected_match.get("id")
-
-    if not course_id:
-        st.warning("This API match does not include a course ID.")
-        st.stop()
-
-    course_details = api_get_course_details(course_id)
-
-    if not course_details:
-        st.warning("Could not load course details from API.")
-        st.stop()
-
-    tee_options = get_tee_options(course_details)
-
-    if not tee_options:
-        st.warning("Course loaded, but no tee boxes were found in the API detail response.")
-        st.stop()
-
-    tee_labels = [option["label"] for option in tee_options]
-    selected_tee_label = st.selectbox("TEE", tee_labels)
-
-    selected_tee_index = tee_labels.index(selected_tee_label)
-    selected_tee = tee_options[selected_tee_index]["tee"]
-
-    tee_holes = get_holes_from_tee(selected_tee)
-
-    if not tee_holes:
-        st.warning("Tee selected, but no hole-by-hole yardage data was found.")
-        st.stop()
-
-    max_holes = len(tee_holes)
-
-    if max_holes >= 18:
-        holes = st.selectbox("HOLES", [9, 18], index=1)
-    else:
-        holes = st.selectbox("HOLES", [max_holes], index=0)
-
-    if st.button("START ROUND"):
-        st.session_state.course = selected_course
-        st.session_state.api_course = selected_match_label
-        st.session_state.tee = selected_tee_label
-        st.session_state.holes = holes
-        st.session_state.hole_data = tee_holes[:holes]
-        st.session_state.round_date = round_date
-
-        st.session_state.screen = "scorecard"
-        st.rerun()
-
-elif st.session_state.screen == "scorecard":
-    course = st.session_state.course
-    tee = st.session_state.tee
-    hole_data = st.session_state.hole_data
-
-    st.markdown(f"<div class='start-title'>{course}</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='tee-title'>TEE: {tee}</div>", unsafe_allow_html=True)
-
-    total_score = 0
-    total_par = 0
-
-    for hole_info in hole_data:
-        hole = hole_info["hole"]
-        par = hole_info["par"]
-        yards = hole_info["yards"]
-
-        total_par += par
-
-        st.markdown(
-            f"<div class='hole-title'>HOLE {hole} • PAR {par} • {yards} YDS</div>",
-            unsafe_allow_html=True
-        )
-
-        score = st.number_input(
-            f"Score Hole {hole}",
-            min_value=1,
-            max_value=20,
-            value=par,
-            step=1,
-            key=f"hole_{hole}"
-        )
-
-        total_score += score
-
-    relation = total_score - total_par
-    relation_text = "E" if relation == 0 else f"+{relation}" if relation > 0 else str(relation)
-
-    st.markdown(
-        f"""
-        <div style='text-align:center; color:white; font-size:40px; font-weight:900; margin:40px 0;'>
-            TOTAL: {total_score} ({relation_text})
-        </div>
-        """,
-        unsafe_allow_html=True
+def tee_display_name(tee):
+    name = (
+        tee.get("tee_name")
+        or tee.get("name")
+        or tee.get("color")
+        or "Tee"
     )
 
-    col1, col2 = st.columns(2)
+    yardage = (
+        tee.get("total_yards")
+        or tee.get("yardage")
+        or tee.get("yards")
+        or ""
+    )
 
-    with col1:
-        if st.button("BACK"):
-            st.session_state.screen = "start_round"
-            st.rerun()
+    rating = tee.get("course_rating") or tee.get("rating") or ""
+    slope = tee.get("slope_rating") or tee.get("slope") or ""
 
-    with col2:
-        if st.button("FINISH ROUND"):
-            st.session_state.screen = "home"
-            st.rerun()
+    parts = [str(name)]
+
+    if yardage:
+        parts.append(f"{yardage} yards")
+    if rating:
+        parts.append(f"Rating {rating}")
+    if slope:
+        parts.append(f"Slope {slope}")
+
+    return " | ".join(parts)
+
+
+def extract_holes_from_tee(tee):
+    holes = (
+        tee.get("holes")
+        or tee.get("yardages")
+        or tee.get("scorecard")
+        or []
+    )
+
+    rows = []
+
+    if isinstance(holes, list):
+        for i, hole in enumerate(holes, start=1):
+            if isinstance(hole, dict):
+                rows.append({
+                    "Hole": hole.get("hole") or hole.get("number") or i,
+                    "Par": hole.get("par", ""),
+                    "Yards": hole.get("yards") or hole.get("yardage") or "",
+                    "Handicap": hole.get("handicap") or hole.get("hcp") or ""
+                })
+            else:
+                rows.append({
+                    "Hole": i,
+                    "Par": "",
+                    "Yards": hole,
+                    "Handicap": ""
+                })
+
+    return pd.DataFrame(rows)
+
+
+# =========================================================
+# UI
+# =========================================================
+
+st.title("⛳ Golf Course App")
+
+st.markdown(
+    """
+    Search courses directly from the Golf Course API.  
+    The old CSV course system has been removed.
+    """
+)
+
+st.divider()
+
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    selected_state_name = st.selectbox(
+        "Select State",
+        list(US_STATES.keys()),
+        index=list(US_STATES.keys()).index("Kentucky")
+    )
+
+    selected_state = US_STATES[selected_state_name]
+
+with col2:
+    search_text = st.text_input(
+        "Search Course Name",
+        placeholder="Example: Lassing Pointe, Bethpage, Pebble Beach"
+    )
+
+if not search_text:
+    st.info("Enter a course name to search.")
+    st.stop()
+
+with st.spinner("Searching Golf Course API..."):
+    courses = search_courses(search_text)
+
+if not courses:
+    st.warning("No courses found from the API.")
+    st.stop()
+
+state_filtered_courses = filter_courses_by_state(courses, selected_state)
+
+if state_filtered_courses:
+    courses_to_show = state_filtered_courses
+else:
+    st.warning(
+        f"No exact matches found in {selected_state_name}. Showing all API matches for this search."
+    )
+    courses_to_show = courses
+
+course_options = {
+    f"{normalize_course_name(c)} — {normalize_location(c)}": c
+    for c in courses_to_show
+}
+
+selected_course_label = st.selectbox(
+    "Select Course",
+    list(course_options.keys())
+)
+
+selected_course = course_options[selected_course_label]
+course_id = get_course_id(selected_course)
+
+if not course_id:
+    st.error("Selected course does not include a usable course ID.")
+    st.stop()
+
+with st.spinner("Loading tees and yardages..."):
+    course_details = get_course_details(course_id)
+
+st.divider()
+
+st.subheader(normalize_course_name(course_details or selected_course))
+
+location = normalize_location(course_details or selected_course)
+if location:
+    st.caption(location)
+
+tees = extract_tees(course_details)
+
+if not tees:
+    st.warning("No tee or yardage information was returned for this course.")
+    with st.expander("Raw API response"):
+        st.json(course_details)
+    st.stop()
+
+tee_options = {
+    tee_display_name(t): t
+    for t in tees
+}
+
+selected_tee_label = st.selectbox(
+    "Select Tee Box",
+    list(tee_options.keys())
+)
+
+selected_tee = tee_options[selected_tee_label]
+
+st.markdown("### Tee Information")
+
+tee_summary = {
+    "Tee": selected_tee.get("tee_name") or selected_tee.get("name") or selected_tee.get("color"),
+    "Total Yards": selected_tee.get("total_yards") or selected_tee.get("yardage") or selected_tee.get("yards"),
+    "Course Rating": selected_tee.get("course_rating") or selected_tee.get("rating"),
+    "Slope Rating": selected_tee.get("slope_rating") or selected_tee.get("slope"),
+}
+
+st.dataframe(
+    pd.DataFrame([tee_summary]).dropna(axis=1, how="all"),
+    use_container_width=True,
+    hide_index=True
+)
+
+holes_df = extract_holes_from_tee(selected_tee)
+
+if not holes_df.empty:
+    st.markdown("### Hole Yardages")
+    st.dataframe(
+        holes_df,
+        use_container_width=True,
+        hide_index=True
+    )
+else:
+    st.info("This tee box did not include hole-by-hole yardages.")
+
+with st.expander("Raw API course details"):
+    st.json(course_details)
