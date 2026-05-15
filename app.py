@@ -93,17 +93,11 @@ label {
 }
 
 /* Score cards */
-.score-card {
-    border: 2px solid #59e36a;
-    padding: 18px;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
 .score-hole {
     color: white;
     font-size: 24px;
     font-weight: bold;
+    margin-top: 20px;
 }
 
 .score-total {
@@ -200,7 +194,7 @@ if st.session_state.page == "start_round":
         if submitted:
 
             st.session_state.holes = holes
-            st.session_state.scores = [0] * holes
+            st.session_state.scores = [4] * holes
             st.session_state.course = course
             st.session_state.tees = tees
             st.session_state.round_date = round_date
