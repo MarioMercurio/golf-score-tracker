@@ -13,21 +13,9 @@ st.set_page_config(
 
 VIDEO_FILE = "GolfIntro.mp4"
 
-# ---------------------------------------------------
-# PAGE STYLING
-# ---------------------------------------------------
 st.markdown("""
 <style>
-
-#MainMenu {
-    visibility: hidden;
-}
-
-footer {
-    visibility: hidden;
-}
-
-header {
+#MainMenu, footer, header {
     visibility: hidden;
 }
 
@@ -36,14 +24,13 @@ header {
 }
 
 .block-container {
-    padding-top: 0.75rem;
-    max-width: 850px;
+    padding-top: 1rem;
+    max-width: 900px;
 }
 
-/* Header video */
 .video-wrap {
     width: 100%;
-    margin: 20px auto 35px auto;
+    margin: 25px auto 70px auto;
     display: flex;
     justify-content: center;
 }
@@ -55,28 +42,6 @@ header {
     display: block;
 }
 
-/* Main Logo */
-.golf-title {
-    text-align: center;
-    font-size: 112px;
-    font-weight: 900;
-    color: #59e36a;
-    line-height: 1;
-    margin-top: 0px;
-    margin-bottom: 55px;
-    letter-spacing: 4px;
-    font-family: Arial Black, sans-serif;
-    text-shadow:
-        0px 8px 0px #15892d;
-}
-
-/* Button wrapper */
-.button-wrap {
-    max-width: 575px;
-    margin: 0 auto;
-}
-
-/* Big green buttons */
 div.stButton > button {
     width: 100%;
     background-color: #59e36a;
@@ -86,11 +51,8 @@ div.stButton > button {
     height: 105px;
     font-size: 42px;
     font-weight: 900;
-    margin-top: 0px;
-    margin-bottom: 10px;
     font-family: Arial Black, sans-serif;
     letter-spacing: 2px;
-    box-shadow: none;
 }
 
 div.stButton > button:hover {
@@ -99,7 +61,6 @@ div.stButton > button:hover {
     border: none;
 }
 
-/* Form section */
 .section-title {
     color: white;
     font-size: 42px;
@@ -121,13 +82,10 @@ label {
     color: white !important;
     border: 1px solid #59e36a !important;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------------------------------------------
-# HELPERS
-# ---------------------------------------------------
+
 def autoplay_video(video_path):
     path = Path(video_path)
 
@@ -149,37 +107,23 @@ def autoplay_video(video_path):
         unsafe_allow_html=True
     )
 
-# ---------------------------------------------------
-# SESSION STATE
-# ---------------------------------------------------
+
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
-# ---------------------------------------------------
-# HOME PAGE
-# ---------------------------------------------------
-if st.session_state.page == "home":
 
+if st.session_state.page == "home":
     autoplay_video(VIDEO_FILE)
 
-    st.markdown(
-        '<div class="golf-title">GOLF</div>',
-        unsafe_allow_html=True
-    )
+    left, middle, right = st.columns([1, 3, 1])
 
-    st.markdown('<div class="button-wrap">', unsafe_allow_html=True)
+    with middle:
+        if st.button("PLAY GOLF"):
+            st.session_state.page = "play"
+            st.rerun()
 
-    if st.button("PLAY GOLF"):
-        st.session_state.page = "play"
-        st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# ---------------------------------------------------
-# PLAY GOLF PAGE
-# ---------------------------------------------------
 if st.session_state.page == "play":
-
     if st.button("← BACK"):
         st.session_state.page = "home"
         st.rerun()
@@ -190,25 +134,14 @@ if st.session_state.page == "play":
     )
 
     with st.form("round_form"):
-
-        round_date = st.date_input(
-            "DATE",
-            value=date.today()
-        )
-
+        round_date = st.date_input("DATE", value=date.today())
         course = st.text_input("COURSE")
-
         tees = st.text_input("TEES")
-
-        holes = st.selectbox(
-            "HOLES",
-            [18, 9]
-        )
+        holes = st.selectbox("HOLES", [18, 9])
 
         submitted = st.form_submit_button("START ROUND")
 
         if submitted:
-
             if course.strip() == "":
                 st.error("Please enter a course.")
             else:
