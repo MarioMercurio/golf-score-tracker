@@ -3,7 +3,12 @@ from datetime import date
 from pathlib import Path
 
 import pandas as pd
+import requests
 import streamlit as st
+
+# -----------------------------------
+# PAGE CONFIG
+# -----------------------------------
 
 st.set_page_config(
     page_title="GOLF",
@@ -14,20 +19,16 @@ st.set_page_config(
 
 VIDEO_FILE = "GolfIntro.mp4"
 
-@st.cache_data
-def load_courses():
-    if Path("opengolfapi-us.csv").exists():
-        return pd.read_csv("opengolfapi-us.csv")
-    if Path("data/opengolfapi-us.csv").exists():
-        return pd.read_csv("data/opengolfapi-us.csv")
-    st.error("Course database not found.")
-    st.stop()
-
-df = load_courses()
+# -----------------------------------
+# STYLING
+# -----------------------------------
 
 st.markdown("""
 <style>
-#MainMenu, footer, header {visibility: hidden;}
+
+#MainMenu, footer, header {
+    visibility: hidden;
+}
 
 .stApp {
     background-color: black;
@@ -49,7 +50,6 @@ st.markdown("""
     width: 100%;
     max-width: 760px;
     border: 2px solid #111111;
-    display: block;
 }
 
 .start-title {
@@ -97,14 +97,19 @@ label {
     color: white !important;
     font-weight: 700 !important;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
+# -----------------------------------
+# VIDEO
+# -----------------------------------
+
 def autoplay_video(video_path):
+
     path = Path(video_path)
 
     if not path.exists():
-        st.warning(f"Video file not found: {video_path}")
         return
 
     video_bytes = path.read_bytes()
@@ -121,92 +126,168 @@ def autoplay_video(video_path):
         unsafe_allow_html=True
     )
 
+# -----------------------------------
+# API FUNCTIONS
+# -----------------------------------
+
+@st.cache_data
+def get_courses_by_state(state):
+
+    url = f"https://api.opengolfapi.org/v1/courses/state/{state}"
+
+    try:
+        response = requests.get(url, timeout=20)
+
+        if response.status_code == 200:
+            return response.json()
+
+    except:
+        return []
+
+    return []
+
+# -----------------------------------
+# SESSION STATE
+# -----------------------------------
+
 if "screen" not in st.session_state:
     st.session_state.screen = "home"
 
+# -----------------------------------
+# HOME SCREEN
+# -----------------------------------
+
 if st.session_state.screen == "home":
+
     autoplay_video(VIDEO_FILE)
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    st.markdown(
+        """
+        <div style='text-align:center; margin-top:20px;'>
+            <img src='https://raw.githubusercontent.com/MarioMercurio/golf-score-tracker/main/GOLFLOGO.png' width='780'>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1,2,1])
 
     with col2:
+
         if st.button("PLAY GOLF"):
+
             st.session_state.screen = "start_round"
             st.rerun()
 
+# -----------------------------------
+# START ROUND SCREEN
+# -----------------------------------
+
 elif st.session_state.screen == "start_round":
-    st.markdown("<div class='start-title'>START ROUND</div>", unsafe_allow_html=True)
+
+    st.markdown(
+        "<div class='start-title'>START ROUND</div>",
+        unsafe_allow_html=True
+    )
+
     st.markdown("<div class='section-box'>", unsafe_allow_html=True)
 
-    round_date = st.date_input("DATE", value=date.today())
+    round_date = st.date_input(
+        "DATE",
+        value=date.today()
+    )
 
-    states = sorted(df["state"].dropna().unique())
-    selected_state = st.selectbox("STATE", states)
+    # -----------------------------------
+    # STATE
+    # -----------------------------------
 
-    filtered_courses = df[df["state"] == selected_state]
-    course_names = sorted(filtered_courses["name"].dropna().unique())
-    selected_course = st.selectbox("COURSE", course_names)
+    states = [
+        "AL","AK","AZ","AR","CA","CO","CT","DE",
+        "FL","GA","HI","ID","IL","IN","IA","KS",
+        "KY","LA","ME","MD","MA","MI","MN","MS",
+        "MO","MT","NE","NV","NH","NJ","NM","NY",
+        "NC","ND","OH","OK","OR","PA","RI","SC",
+        "SD","TN","TX","UT","VT","VA","WA","WV",
+        "WI","WY"
+    ]
 
-    course_rows = filtered_courses[filtered_courses["name"] == selected_course]
+    selected_state = st.selectbox(
+        "STATE",
+        states,
+        index=18
+    )
 
-    tee_options = ["Default"]
-    if "tee_name" in df.columns:
-        tee_options = sorted(course_rows["tee_name"].dropna().unique())
-        if len(tee_options) == 0:
-            tee_options = ["Default"]
+    # -----------------------------------
+    # LOAD COURSES
+    # -----------------------------------
 
-    selected_tee = st.selectbox("TEE", tee_options)
+    courses = get_courses_by_state(selected_state)
 
-    holes = st.selectbox("HOLES", [9, 18], index=1)
+    course_names = []
+
+    for course in courses:
+
+        if "name" in course:
+            course_names.append(course["name"])
+
+    course_names = sorted(list(set(course_names)))
+
+    selected_course = st.selectbox(
+        "COURSE",
+        course_names
+    )
+
+    tee_played = st.text_input(
+        "TEE PLAYED",
+        value="Blue"
+    )
+
+    holes = st.selectbox(
+        "HOLES",
+        [9, 18],
+        index=1
+    )
 
     if st.button("START ROUND"):
-        if selected_tee != "Default" and "tee_name" in df.columns:
-            selected_rows = course_rows[course_rows["tee_name"] == selected_tee]
-        else:
-            selected_rows = course_rows
-
-        course_row = selected_rows.iloc[0]
 
         st.session_state.course = selected_course
-        st.session_state.tee = selected_tee
+        st.session_state.tee = tee_played
         st.session_state.holes = holes
-        st.session_state.course_row = course_row.to_dict()
+
         st.session_state.screen = "scorecard"
+
         st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+# -----------------------------------
+# SCORECARD
+# -----------------------------------
+
 elif st.session_state.screen == "scorecard":
+
     course = st.session_state.course
     tee = st.session_state.tee
     holes = st.session_state.holes
-    row = st.session_state.course_row
 
-    st.markdown(f"<div class='start-title'>{course}</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='tee-title'>TEE: {tee}</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='start-title'>{course}</div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        f"<div class='tee-title'>TEE: {tee}</div>",
+        unsafe_allow_html=True
+    )
 
     total_score = 0
-    total_par = 0
 
     for hole in range(1, holes + 1):
-        par_col = f"hole_{hole}_par"
-        yard_col = f"hole_{hole}_yards"
-
-        par = row.get(par_col, 4)
-        yards = row.get(yard_col, 0)
-
-        if pd.isna(par):
-            par = 4
-        if pd.isna(yards):
-            yards = 0
-
-        par = int(par)
-        yards = int(yards)
-
-        total_par += par
 
         st.markdown(
-            f"<div class='hole-title'>HOLE {hole} • PAR {par} • {yards} YDS</div>",
+            f"<div class='hole-title'>HOLE {hole}</div>",
             unsafe_allow_html=True
         )
 
@@ -214,25 +295,31 @@ elif st.session_state.screen == "scorecard":
             f"Score Hole {hole}",
             min_value=1,
             max_value=20,
-            value=par,
+            value=4,
             step=1,
             key=f"hole_{hole}"
         )
 
         total_score += score
 
-    relation = total_score - total_par
-    relation_text = "E" if relation == 0 else f"+{relation}" if relation > 0 else str(relation)
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
     st.markdown(
         f"""
-        <div style='text-align:center; color:white; font-size:40px; font-weight:900; margin:40px 0;'>
-            TOTAL: {total_score} ({relation_text})
+        <div style='
+            text-align:center;
+            color:white;
+            font-size:40px;
+            font-weight:900;
+            margin-bottom:40px;
+        '>
+            TOTAL: {total_score}
         </div>
         """,
         unsafe_allow_html=True
     )
 
     if st.button("FINISH ROUND"):
+
         st.session_state.screen = "home"
         st.rerun()
