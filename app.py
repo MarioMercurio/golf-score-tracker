@@ -32,15 +32,9 @@ US_STATES = {
     "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
 }
 
-CLUBS = [
-    "DR", "3W", "5W", "HYB",
-    "4I", "5I", "6I", "7I", "8I", "9I",
-    "PW", "GW", "SW", "LW"
-]
-
+CLUBS = ["DR", "3W", "5W", "HYB", "4I", "5I", "6I", "7I", "8I", "9I", "PW", "GW", "SW", "LW"]
 TEE_LOCATIONS = ["LOST LEFT", "LEFT", "CENTER", "RIGHT", "LOST RIGHT"]
 TEE_QUALITIES = ["CRUSHED", "AVERAGE", "MIS-HIT"]
-
 HAZARDS = ["OB", "GREEN BUNKER", "FAIRWAY BUNKER", "WATER", "DROP"]
 GASHES = ["DUFF", "HERO SHOT", "MISREAD", "UNDER CLUB", "BAD TARGET AREA"]
 
@@ -62,7 +56,6 @@ def api_search_courses(search_query):
             params={"search_query": search_query},
             timeout=20
         )
-
         if response.status_code != 200:
             return []
 
@@ -85,7 +78,6 @@ def api_get_course_details(course_id):
             headers={"Authorization": f"Key {api_key}"},
             timeout=20
         )
-
         if response.status_code != 200:
             return {}
 
@@ -152,10 +144,7 @@ def get_tee_options(course_details):
                 parts.append(f"Slope {slope}")
             parts.append(gender.title())
 
-            tee_options.append({
-                "label": " • ".join(parts),
-                "tee": tee
-            })
+            tee_options.append({"label": " • ".join(parts), "tee": tee})
 
     return tee_options
 
@@ -204,11 +193,9 @@ def default_hole_entry(hole_info):
 
 def init_round_entries():
     st.session_state.round_entries = {}
-
     for hole_info in st.session_state.hole_data:
         hole_num = hole_info["hole"]
         st.session_state.round_entries[hole_num] = default_hole_entry(hole_info)
-
     st.session_state.current_hole_index = 0
 
 
@@ -222,9 +209,13 @@ def set_nested_value(hole_num, group, key, value):
 
 st.markdown("""
 <style>
-#MainMenu, footer, header {visibility: hidden;}
+#MainMenu, footer, header {
+    visibility: hidden;
+}
 
-.stApp {background-color: black;}
+.stApp {
+    background-color: black;
+}
 
 .block-container {
     padding-top: 1rem;
@@ -252,15 +243,72 @@ st.markdown("""
     margin-bottom: 40px;
 }
 
-.stButton > button {
-    background-color: #4DDB68 !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 0px !important;
-    height: 80px !important;
-    font-size: 28px !important;
-    font-weight: 900 !important;
-    width: 100% !important;
+.hole-header {
+    background: #4DDB68;
+    color: white;
+    font-size: 58px;
+    font-weight: 1000;
+    text-align: center;
+    padding: 18px;
+    margin-bottom: 18px;
+}
+
+.hole-meta {
+    color: white;
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1.5;
+    margin-bottom: 25px;
+}
+
+.hole-meta span {
+    color: #ff3529;
+}
+
+.big-label {
+    color: white;
+    font-size: 44px;
+    font-weight: 1000;
+    margin-top: 14px;
+    margin-bottom: 4px;
+}
+
+.section-title {
+    color: #4DDB68;
+    font-size: 52px;
+    font-weight: 1000;
+    text-align: center;
+    margin-top: 26px;
+    margin-bottom: 18px;
+}
+
+.white-line {
+    border-top: 5px solid white;
+    margin: 30px 0 22px 0;
+}
+
+.api-note {
+    color: #AAAAAA;
+    text-align: center;
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.small-note {
+    color: red;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 900;
+    margin-top: -8px;
+    margin-bottom: 12px;
+}
+
+.summary-box {
+    color: white;
+    border: 2px solid #333;
+    padding: 20px;
+    font-size: 22px;
+    font-weight: 800;
 }
 
 label {
@@ -273,74 +321,138 @@ input {
     color: white !important;
 }
 
-.api-note {
-    color: #AAAAAA;
-    text-align: center;
-    font-size: 16px;
-    margin-bottom: 20px;
+.stButton > button {
+    background-color: #4DDB68 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 0px !important;
+    min-height: 74px !important;
+    font-size: 24px !important;
+    font-weight: 900 !important;
+    width: 100% !important;
 }
 
-.hole-header {
-    background: #4DDB68;
-    color: white;
-    font-size: 58px;
-    font-weight: 1000;
-    text-align: center;
-    padding: 18px;
-    margin-bottom: 22px;
+div[data-testid="stNumberInput"] button {
+    background-color: #2b2c34 !important;
+    color: white !important;
+    border-radius: 0px !important;
 }
 
-.hole-meta {
-    color: white;
-    font-size: 24px;
-    font-weight: 900;
-    line-height: 1.45;
+div[data-testid="stNumberInput"] input {
+    font-size: 30px !important;
+    font-weight: 800 !important;
+    min-height: 64px !important;
 }
 
-.hole-meta span {
-    color: red;
+div[data-baseweb="select"] > div {
+    min-height: 58px !important;
+    font-size: 22px !important;
 }
 
-.big-label {
-    color: white;
-    font-size: 44px;
-    font-weight: 1000;
+div[role="radiogroup"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
-.section-title {
-    color: #4DDB68;
-    font-size: 48px;
-    font-weight: 1000;
-    text-align: center;
-    margin-top: 25px;
-    margin-bottom: 15px;
+div[role="radiogroup"] label {
+    background-color: #191919;
+    border: 2px solid #4DDB68;
+    padding: 14px 18px;
+    min-width: 120px;
+    justify-content: center;
 }
 
-.white-line {
-    border-top: 5px solid white;
-    margin: 30px 0 20px 0;
+div[role="radiogroup"] label p {
+    color: white !important;
+    font-size: 20px !important;
+    font-weight: 900 !important;
 }
 
-.choice-grid-title {
-    color: yellow;
-    text-align: center;
-    font-weight: 900;
-    font-size: 16px;
-}
+@media (max-width: 768px) {
+    .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        padding-top: .5rem;
+        max-width: 100%;
+    }
 
-.small-note {
-    color: red;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 900;
-}
+    .start-title {
+        font-size: 48px;
+        margin-bottom: 28px;
+    }
 
-.summary-box {
-    color: white;
-    border: 2px solid #333;
-    padding: 20px;
-    font-size: 22px;
-    font-weight: 800;
+    .hole-header {
+        font-size: 46px;
+        padding: 18px 10px;
+        margin-top: 4px;
+        margin-bottom: 20px;
+    }
+
+    .hole-meta {
+        font-size: 30px;
+        margin-bottom: 20px;
+    }
+
+    .big-label {
+        font-size: 46px;
+        margin-top: 16px;
+        margin-bottom: 0px;
+    }
+
+    .section-title {
+        font-size: 46px;
+        line-height: 1.05;
+        margin-top: 24px;
+        margin-bottom: 22px;
+    }
+
+    .white-line {
+        margin: 28px 0 20px 0;
+        border-top: 4px solid white;
+    }
+
+    .stButton > button {
+        min-height: 66px !important;
+        font-size: 22px !important;
+    }
+
+    div[data-testid="stNumberInput"] {
+        margin-bottom: 8px;
+    }
+
+    div[data-testid="stNumberInput"] input {
+        min-height: 58px !important;
+        font-size: 26px !important;
+    }
+
+    div[data-baseweb="select"] > div {
+        min-height: 56px !important;
+        font-size: 22px !important;
+    }
+
+    div[role="radiogroup"] {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    div[role="radiogroup"] label {
+        min-width: 0px !important;
+        width: 100%;
+        padding: 15px 8px;
+        text-align: center;
+    }
+
+    div[role="radiogroup"] label p {
+        font-size: 17px !important;
+    }
+
+    .small-note {
+        font-size: 13px;
+        margin-top: -6px;
+        margin-bottom: 14px;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -489,18 +601,20 @@ elif st.session_state.screen == "scorecard":
     hole_num = hole_info["hole"]
     entry = st.session_state.round_entries[hole_num]
 
-    top1, top2, top3 = st.columns([1, 2, 1])
+    nav_left, nav_mid, nav_right = st.columns([1, 1.2, 1])
 
-    with top1:
-        if st.button("◀ PREV") and current_index > 0:
-            st.session_state.current_hole_index -= 1
-            st.rerun()
+    with nav_left:
+        if st.button("◀"):
+            if current_index > 0:
+                st.session_state.current_hole_index -= 1
+                st.rerun()
 
-    with top2:
+    with nav_mid:
         selected_hole = st.selectbox(
-            "GO TO HOLE",
+            "HOLE",
             [h["hole"] for h in hole_data],
-            index=current_index
+            index=current_index,
+            label_visibility="collapsed"
         )
 
         new_index = [h["hole"] for h in hole_data].index(selected_hole)
@@ -508,53 +622,48 @@ elif st.session_state.screen == "scorecard":
             st.session_state.current_hole_index = new_index
             st.rerun()
 
-    with top3:
-        if st.button("NEXT ▶") and current_index < len(hole_data) - 1:
-            st.session_state.current_hole_index += 1
-            st.rerun()
+    with nav_right:
+        if st.button("▶"):
+            if current_index < len(hole_data) - 1:
+                st.session_state.current_hole_index += 1
+                st.rerun()
 
-    col1, col2 = st.columns([1.25, 1])
+    st.markdown(f"<div class='hole-header'>HOLE {hole_num}</div>", unsafe_allow_html=True)
 
-    with col1:
-        st.markdown(f"<div class='hole-header'>HOLE {hole_num}</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class='hole-meta'>
+        PAR: <span>{entry['par']}</span><br>
+        YARDS: <span>{entry['yards']}</span><br>
+        HANDICAP: <span>{entry['handicap']}</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    with col2:
-        st.markdown(
-            f"""
-            <div class='hole-meta'>
-            PAR: <span>{entry['par']}</span><br>
-            YARDS: <span>{entry['yards']}</span><br>
-            HANDICAP: <span>{entry['handicap']}</span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    st.markdown("<div class='big-label'>SCORE:</div>", unsafe_allow_html=True)
+    score = st.number_input(
+        "Score",
+        min_value=1,
+        max_value=20,
+        value=int(entry["score"]),
+        step=1,
+        key=f"score_{hole_num}",
+        label_visibility="collapsed"
+    )
+    set_value(hole_num, "score", score)
 
-    score_col, putt_col = st.columns(2)
-
-    with score_col:
-        st.markdown("<div class='big-label'>SCORE:</div>", unsafe_allow_html=True)
-        score = st.number_input(
-            " ",
-            min_value=1,
-            max_value=20,
-            value=int(entry["score"]),
-            step=1,
-            key=f"score_{hole_num}"
-        )
-        set_value(hole_num, "score", score)
-
-    with putt_col:
-        st.markdown("<div class='big-label'>PUTTS:</div>", unsafe_allow_html=True)
-        putts = st.number_input(
-            "  ",
-            min_value=0,
-            max_value=10,
-            value=int(entry["putts"]),
-            step=1,
-            key=f"putts_{hole_num}"
-        )
-        set_value(hole_num, "putts", putts)
+    st.markdown("<div class='big-label'>PUTTS:</div>", unsafe_allow_html=True)
+    putts = st.number_input(
+        "Putts",
+        min_value=0,
+        max_value=10,
+        value=int(entry["putts"]),
+        step=1,
+        key=f"putts_{hole_num}",
+        label_visibility="collapsed"
+    )
+    set_value(hole_num, "putts", putts)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>TEE SHOT</div>", unsafe_allow_html=True)
@@ -569,106 +678,91 @@ elif st.session_state.screen == "scorecard":
 
     st.markdown("<div class='big-label' style='font-size:34px;'>LOCATION:</div>", unsafe_allow_html=True)
 
-    loc_cols = st.columns(5)
+    tee_location = st.radio(
+        "TEE LOCATION",
+        TEE_LOCATIONS,
+        index=TEE_LOCATIONS.index(entry["tee_location"]) if entry["tee_location"] in TEE_LOCATIONS else 2,
+        horizontal=True,
+        key=f"tee_location_{hole_num}",
+        label_visibility="collapsed"
+    )
+    set_value(hole_num, "tee_location", tee_location)
 
-    for i, location in enumerate(TEE_LOCATIONS):
-        with loc_cols[i]:
-            st.markdown(f"<div class='choice-grid-title'>{location}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='big-label' style='font-size:34px;'>QUALITY:</div>", unsafe_allow_html=True)
 
-            for quality in TEE_QUALITIES:
-                selected = (
-                    entry["tee_location"] == location
-                    and entry["tee_quality"] == quality
-                )
-
-                label = f"{'✓ ' if selected else ''}{quality}"
-
-                if st.button(label, key=f"tee_{hole_num}_{location}_{quality}"):
-                    set_value(hole_num, "tee_location", location)
-                    set_value(hole_num, "tee_quality", quality)
-                    st.rerun()
+    tee_quality = st.radio(
+        "TEE QUALITY",
+        TEE_QUALITIES,
+        index=TEE_QUALITIES.index(entry["tee_quality"]) if entry["tee_quality"] in TEE_QUALITIES else 1,
+        horizontal=True,
+        key=f"tee_quality_{hole_num}",
+        label_visibility="collapsed"
+    )
+    set_value(hole_num, "tee_quality", tee_quality)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>PENALTIES / HAZARDS</div>", unsafe_allow_html=True)
 
-    hazard_cols = st.columns(5)
-
-    for i, hazard in enumerate(HAZARDS):
-        with hazard_cols[i]:
-            st.markdown(f"<div class='choice-grid-title'>{hazard}</div>", unsafe_allow_html=True)
-            value = st.number_input(
-                hazard,
-                min_value=0,
-                max_value=10,
-                value=int(entry["hazards"][hazard]),
-                step=1,
-                key=f"hazard_{hole_num}_{hazard}",
-                label_visibility="collapsed"
-            )
-            set_nested_value(hole_num, "hazards", hazard, value)
-            st.markdown("<div class='small-note'>DEFAULT IS 0</div>", unsafe_allow_html=True)
+    for hazard in HAZARDS:
+        st.markdown(f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{hazard}</div>", unsafe_allow_html=True)
+        value = st.number_input(
+            hazard,
+            min_value=0,
+            max_value=10,
+            value=int(entry["hazards"][hazard]),
+            step=1,
+            key=f"hazard_{hole_num}_{hazard}",
+            label_visibility="collapsed"
+        )
+        set_nested_value(hole_num, "hazards", hazard, value)
+        st.markdown("<div class='small-note'>DEFAULT IS 0</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>SCORING ZONE</div>", unsafe_allow_html=True)
 
-    inside_cols = st.columns(2)
+    st.markdown(
+        "<div class='big-label' style='font-size:30px;'>INSIDE 100 YARDS IN 3 SHOTS?</div>",
+        unsafe_allow_html=True
+    )
 
-    with inside_cols[0]:
-        st.markdown(
-            "<div class='big-label' style='font-size:32px;'>INSIDE 100 YARDS IN 3 SHOTS?</div>",
-            unsafe_allow_html=True
-        )
-
-    with inside_cols[1]:
-        yes_col, no_col = st.columns(2)
-
-        with yes_col:
-            if st.button(
-                "YES" if entry["inside_100_in_3"] != "YES" else "✓ YES",
-                key=f"inside_yes_{hole_num}"
-            ):
-                set_value(hole_num, "inside_100_in_3", "YES")
-                st.rerun()
-
-        with no_col:
-            if st.button(
-                "NO" if entry["inside_100_in_3"] != "NO" else "✓ NO",
-                key=f"inside_no_{hole_num}"
-            ):
-                set_value(hole_num, "inside_100_in_3", "NO")
-                st.rerun()
+    inside_answer = st.radio(
+        "INSIDE 100",
+        ["YES", "NO"],
+        index=0 if entry["inside_100_in_3"] == "YES" else 1,
+        horizontal=True,
+        key=f"inside_100_{hole_num}",
+        label_visibility="collapsed"
+    )
+    set_value(hole_num, "inside_100_in_3", inside_answer)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>GASHES</div>", unsafe_allow_html=True)
 
-    gash_cols = st.columns(5)
-
-    for i, gash in enumerate(GASHES):
-        with gash_cols[i]:
-            st.markdown(f"<div class='choice-grid-title'>{gash}</div>", unsafe_allow_html=True)
-            value = st.number_input(
-                gash,
-                min_value=0,
-                max_value=10,
-                value=int(entry["gashes"][gash]),
-                step=1,
-                key=f"gash_{hole_num}_{gash}",
-                label_visibility="collapsed"
-            )
-            set_nested_value(hole_num, "gashes", gash, value)
-            st.markdown("<div class='small-note'>DEFAULT IS 0</div>", unsafe_allow_html=True)
+    for gash in GASHES:
+        st.markdown(f"<div class='big-label' style='font-size:26px; color:yellow; text-align:center;'>{gash}</div>", unsafe_allow_html=True)
+        value = st.number_input(
+            gash,
+            min_value=0,
+            max_value=10,
+            value=int(entry["gashes"][gash]),
+            step=1,
+            key=f"gash_{hole_num}_{gash}",
+            label_visibility="collapsed"
+        )
+        set_nested_value(hole_num, "gashes", gash, value)
+        st.markdown("<div class='small-note'>DEFAULT IS 0</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
 
-    nav1, nav2 = st.columns(2)
+    bottom1, bottom2 = st.columns(2)
 
-    with nav1:
-        if st.button("BACK TO SETUP"):
+    with bottom1:
+        if st.button("SETUP"):
             st.session_state.screen = "start_round"
             st.rerun()
 
-    with nav2:
-        if st.button("FINISH ROUND"):
+    with bottom2:
+        if st.button("FINISH"):
             st.session_state.screen = "round_summary"
             st.rerun()
 
