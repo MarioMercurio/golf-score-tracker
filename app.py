@@ -17,34 +17,22 @@ VIDEO_FILE = "GolfIntro.mp4"
 COURSE_CSV = "opengolfapi-us.csv"
 API_BASE_URL = "https://api.golfcourseapi.com"
 
-# ---------------------------------------------------
-# DATA
-# ---------------------------------------------------
 @st.cache_data
 def load_local_courses():
     if Path(COURSE_CSV).exists():
         return pd.read_csv(COURSE_CSV)
-
     if Path(f"data/{COURSE_CSV}").exists():
         return pd.read_csv(f"data/{COURSE_CSV}")
-
     return pd.DataFrame()
-
 
 @st.cache_data
 def api_search_courses(search_query):
     api_key = st.secrets.get("GOLF_API_KEY", "")
-
     if not api_key:
         return []
 
-    headers = {
-        "Authorization": f"Key {api_key}"
-    }
-
-    params = {
-        "search_query": search_query
-    }
+    headers = {"Authorization": f"Key {api_key}"}
+    params = {"search_query": search_query}
 
     try:
         response = requests.get(
@@ -53,27 +41,19 @@ def api_search_courses(search_query):
             params=params,
             timeout=20
         )
-
         if response.status_code != 200:
             return []
-
-        data = response.json()
-        return data.get("courses", [])
-
+        return response.json().get("courses", [])
     except Exception:
         return []
-
 
 @st.cache_data
 def api_get_course_details(course_id):
     api_key = st.secrets.get("GOLF_API_KEY", "")
-
     if not api_key:
         return {}
 
-    headers = {
-        "Authorization": f"Key {api_key}"
-    }
+    headers = {"Authorization": f"Key {api_key}"}
 
     try:
         response = requests.get(
@@ -81,15 +61,11 @@ def api_get_course_details(course_id):
             headers=headers,
             timeout=20
         )
-
         if response.status_code != 200:
             return {}
-
         return response.json()
-
     except Exception:
         return {}
-
 
 def get_course_display_name(course):
     club = course.get("club_name", "")
@@ -99,19 +75,17 @@ def get_course_display_name(course):
 
     main_name = course_name or club or "Unknown Course"
 
-    location = ""
     if city and state:
-        location = f" — {city}, {state}"
-    elif state:
-        location = f" — {state}"
-
-    return f"{main_name}{location}"
-
+        return f"{main_name} — {city}, {state}"
+    if state:
+        return f"{main_name} — {state}"
+    return main_name
 
 def get_tee_options(course_details):
     tee_options = []
 
-    tees = course_details.get("tees", {})
+    course_data = course_details.get("course", {})
+    tees = course_data.get("tees", {})
 
     if not isinstance(tees, dict):
         return tee_options
@@ -123,36 +97,21 @@ def get_tee_options(course_details):
             continue
 
         for tee in gender_tees:
-            tee_name = (
-                tee.get("tee_name")
-                or tee.get("name")
-                or tee.get("color")
-                or "Unnamed Tee"
-            )
-
-            total_yards = (
-                tee.get("total_yards")
-                or tee.get("total_distance")
-                or tee.get("yards")
-                or ""
-            )
-
-            rating = tee.get("course_rating", tee.get("rating", ""))
-            slope = tee.get("slope_rating", tee.get("slope", ""))
+            tee_name = tee.get("tee_name", "Unnamed Tee")
+            total_yards = tee.get("total_yards", "")
+            rating = tee.get("course_rating", "")
+            slope = tee.get("slope_rating", "")
 
             label_parts = [tee_name]
 
             if total_yards:
                 label_parts.append(f"{total_yards} yds")
-
             if rating:
                 label_parts.append(f"Rating {rating}")
-
             if slope:
                 label_parts.append(f"Slope {slope}")
 
             label_parts.append(gender.title())
-
             label = " • ".join(label_parts)
 
             tee_options.append({
@@ -163,36 +122,17 @@ def get_tee_options(course_details):
 
     return tee_options
 
-
 def get_holes_from_tee(tee):
     holes = tee.get("holes", [])
-
     clean_holes = []
 
     if not isinstance(holes, list):
         return clean_holes
 
     for index, hole in enumerate(holes, start=1):
-        par = (
-            hole.get("par")
-            or hole.get("hole_par")
-            or 4
-        )
-
-        yards = (
-            hole.get("yards")
-            or hole.get("yardage")
-            or hole.get("distance")
-            or hole.get("tee_yards")
-            or 0
-        )
-
-        handicap = (
-            hole.get("handicap")
-            or hole.get("hcp")
-            or hole.get("stroke_index")
-            or ""
-        )
+        par = hole.get("par", 4)
+        yards = hole.get("yards", 0)
+        handicap = hole.get("handicap", "")
 
         try:
             par = int(par)
@@ -213,12 +153,8 @@ def get_holes_from_tee(tee):
 
     return clean_holes
 
-
 local_df = load_local_courses()
 
-# ---------------------------------------------------
-# STYLING
-# ---------------------------------------------------
 st.markdown("""
 <style>
 #MainMenu, footer, header {
@@ -292,21 +228,9 @@ label {
     font-size: 16px;
     margin-bottom: 20px;
 }
-
-.debug-box {
-    background-color: #111111;
-    color: white;
-    border: 1px solid #4DDB68;
-    padding: 20px;
-    margin-top: 30px;
-    margin-bottom: 30px;
-}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------------------------------------------
-# VIDEO
-# ---------------------------------------------------
 def autoplay_video(video_path):
     path = Path(video_path)
 
@@ -327,15 +251,9 @@ def autoplay_video(video_path):
         unsafe_allow_html=True
     )
 
-# ---------------------------------------------------
-# SESSION STATE
-# ---------------------------------------------------
 if "screen" not in st.session_state:
     st.session_state.screen = "home"
 
-# ---------------------------------------------------
-# HOME
-# ---------------------------------------------------
 if st.session_state.screen == "home":
     autoplay_video(VIDEO_FILE)
 
@@ -346,9 +264,6 @@ if st.session_state.screen == "home":
             st.session_state.screen = "start_round"
             st.rerun()
 
-# ---------------------------------------------------
-# START ROUND
-# ---------------------------------------------------
 elif st.session_state.screen == "start_round":
     st.markdown("<div class='start-title'>START ROUND</div>", unsafe_allow_html=True)
 
@@ -362,7 +277,6 @@ elif st.session_state.screen == "start_round":
     selected_state = st.selectbox("STATE", states)
 
     state_df = local_df[local_df["state"] == selected_state]
-
     course_names = sorted(state_df["name"].dropna().unique())
     selected_course = st.selectbox("COURSE", course_names)
 
@@ -374,15 +288,11 @@ elif st.session_state.screen == "start_round":
     api_matches = api_search_courses(selected_course)
 
     if not api_matches:
-        st.warning("No API course match found yet. Try another course.")
+        st.warning("No API course match found. Try another course.")
         st.stop()
 
     api_match_labels = [get_course_display_name(course) for course in api_matches]
-
-    selected_match_label = st.selectbox(
-        "API COURSE MATCH",
-        api_match_labels
-    )
+    selected_match_label = st.selectbox("API COURSE MATCH", api_match_labels)
 
     selected_match_index = api_match_labels.index(selected_match_label)
     selected_match = api_matches[selected_match_index]
@@ -395,11 +305,6 @@ elif st.session_state.screen == "start_round":
 
     course_details = api_get_course_details(course_id)
 
-    st.markdown("<div class='debug-box'>", unsafe_allow_html=True)
-    st.subheader("DEBUG: API COURSE DETAILS")
-    st.write(course_details)
-    st.markdown("</div>", unsafe_allow_html=True)
-
     if not course_details:
         st.warning("Could not load course details from API.")
         st.stop()
@@ -411,11 +316,7 @@ elif st.session_state.screen == "start_round":
         st.stop()
 
     tee_labels = [option["label"] for option in tee_options]
-
-    selected_tee_label = st.selectbox(
-        "TEE",
-        tee_labels
-    )
+    selected_tee_label = st.selectbox("TEE", tee_labels)
 
     selected_tee_index = tee_labels.index(selected_tee_label)
     selected_tee = tee_options[selected_tee_index]["tee"]
@@ -444,13 +345,9 @@ elif st.session_state.screen == "start_round":
         st.session_state.screen = "scorecard"
         st.rerun()
 
-# ---------------------------------------------------
-# SCORECARD
-# ---------------------------------------------------
 elif st.session_state.screen == "scorecard":
     course = st.session_state.course
     tee = st.session_state.tee
-    holes = st.session_state.holes
     hole_data = st.session_state.hole_data
 
     st.markdown(f"<div class='start-title'>{course}</div>", unsafe_allow_html=True)
