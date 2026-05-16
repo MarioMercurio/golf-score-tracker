@@ -1052,9 +1052,10 @@ def process_query_params(hole_num):
                         set_value(hole_num, "putts", current)
 
                 else:
-                    current = int(st.session_state.round_entries[hole_num][group][key])
-                    current = current + 1 if direction == "plus" else max(0, current - 1)
-                    set_nested_value(hole_num, group, key, current)
+                    if group in st.session_state.round_entries[hole_num] and key in st.session_state.round_entries[hole_num][group]:
+                        current = int(st.session_state.round_entries[hole_num][group][key])
+                        current = current + 1 if direction == "plus" else max(0, current - 1)
+                        set_nested_value(hole_num, group, key, current)
 
             st.query_params.clear()
             st.rerun()
@@ -1332,7 +1333,11 @@ elif st.session_state.screen == "start_round":
 
 
 elif st.session_state.screen == "scorecard":
-    if "round_entries" not in st.session_state:
+    if "hole_data" not in st.session_state or not st.session_state.get("hole_data"):
+        st.session_state.screen = "start_round"
+        st.rerun()
+
+    if "round_entries" not in st.session_state or not st.session_state.get("round_entries"):
         init_round_entries()
 
     hole_data = st.session_state.hole_data
@@ -1411,14 +1416,14 @@ elif st.session_state.screen == "round_summary":
     total_putts = sum(value["putts"] for value in entries.values())
 
     relation = total_score - total_par
-    relation_text = "E" if relation == 0 else f"+{relation}" if relation > 0 else str(relation)
+    summary_relation_text = "E" if relation == 0 else f"+{relation}" if relation > 0 else str(relation)
 
     st.markdown(
         f"""
         <div class='summary-box'>
         COURSE: {st.session_state.course}<br>
         TEE: {st.session_state.tee}<br>
-        SCORE: {total_score} ({relation_text})<br>
+        SCORE: {total_score} ({summary_relation_text})<br>
         PUTTS: {total_putts}
         </div>
         """,
