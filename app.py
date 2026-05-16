@@ -43,10 +43,10 @@ US_STATES = {
 }
 
 COURSE_SWEEP_TERMS = [
-    "", "golf", "club", "country club", "course", "links", "national",
-    "municipal", "park", "valley", "lake", "lakes", "hills", "ridge",
-    "river", "creek", "woods", "meadows", "pointe", "point", "legacy",
-    "green", "greens", "oak", "oaks", "pine", "pines"
+    "", "golf", "club", "country club", "course", "links",
+    "national", "municipal", "park", "valley", "lake",
+    "ridge", "river", "creek", "woods", "meadows",
+    "pointe", "point", "green", "oak", "pine"
 ]
 
 # =========================================================
@@ -157,7 +157,6 @@ def course_label(course):
         return f"{name} — {city}, {state}"
 
     return name
-
 
 # =========================================================
 # COURSE INDEX
@@ -381,14 +380,6 @@ body,
     margin-bottom: 30px;
 }
 
-.score-header {
-    text-align: center;
-    color: white;
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 25px;
-}
-
 /* INPUTS */
 
 label {
@@ -403,7 +394,6 @@ label {
     min-height: 72px !important;
     border-radius: 14px !important;
     font-size: 26px !important;
-
     display: flex !important;
     align-items: center !important;
 }
@@ -417,13 +407,13 @@ label {
     color: black !important;
     border: none !important;
     border-radius: 12px !important;
-    font-size: 26px !important;
+    font-size: 24px !important;
     font-weight: 900 !important;
-    height: 70px !important;
+    height: 68px !important;
     width: 100% !important;
 }
 
-/* HOLE */
+/* SCORECARD */
 
 .hole-banner {
     background: #181818;
@@ -443,8 +433,6 @@ label {
     font-size: 22px;
     font-weight: 700;
 }
-
-/* ICON GRID */
 
 .section-title {
     color: white;
@@ -505,8 +493,8 @@ label {
     }
 
     .stButton > button {
-        font-size: 22px !important;
-        height: 64px !important;
+        font-size: 20px !important;
+        height: 62px !important;
     }
 }
 
@@ -663,9 +651,8 @@ elif st.session_state.screen == "start_round":
 
 elif st.session_state.screen == "scorecard":
 
-    current_hole = st.session_state.current_hole
-
     hole_data = st.session_state.hole_data
+    current_hole = st.session_state.current_hole
 
     hole = hole_data[current_hole - 1]
 
@@ -683,47 +670,146 @@ elif st.session_state.screen == "scorecard":
         unsafe_allow_html=True
     )
 
+    # =====================================================
+    # TEE SHOT
+    # =====================================================
+
     st.markdown(
         "<div class='section-title'>TEE SHOT</div>",
         unsafe_allow_html=True
     )
 
+    if hole["par"] == 3:
+
+        st.markdown(
+            """
+            <div class='icon-grid'>
+                <div class='icon-button'>CENTER</div>
+                <div class='icon-button'>LEFT</div>
+                <div class='icon-button'>RIGHT</div>
+                <div class='icon-button'>SHORT</div>
+                <div class='icon-button'>LONG</div>
+                <div class='icon-button'>GREEN</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    else:
+
+        st.markdown(
+            """
+            <div class='icon-grid'>
+                <div class='icon-button'>FAIRWAY</div>
+                <div class='icon-button'>LEFT</div>
+                <div class='icon-button'>RIGHT</div>
+                <div class='icon-button'>ROUGH</div>
+                <div class='icon-button'>BUNKER</div>
+                <div class='icon-button'>WATER</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # =====================================================
+    # PENALTIES
+    # =====================================================
+
     st.markdown(
-        """
-        <div class='icon-grid'>
-            <div class='icon-button'>FAIRWAY</div>
-            <div class='icon-button'>LEFT</div>
-            <div class='icon-button'>RIGHT</div>
-            <div class='icon-button'>SHORT</div>
-            <div class='icon-button'>BUNKER</div>
-            <div class='icon-button'>WATER</div>
-        </div>
-        """,
+        "<div class='section-title'>PENALTIES</div>",
         unsafe_allow_html=True
     )
+
+    penalty_cols = st.columns(5)
+
+    penalty_labels = [
+        ("🚫", "OB"),
+        ("🌊", "WATER"),
+        ("🌲", "TREE"),
+        ("⛳", "UNPLAYABLE"),
+        ("❌", "OTHER")
+    ]
+
+    for col, (emoji, label) in zip(penalty_cols, penalty_labels):
+
+        with col:
+
+            st.button(
+                f"{emoji}\n{label}",
+                key=f"penalty_{label}_{current_hole}"
+            )
+
+    # =====================================================
+    # GASHES
+    # =====================================================
+
+    st.markdown(
+        "<div class='section-title'>GASHES</div>",
+        unsafe_allow_html=True
+    )
+
+    gash_cols = st.columns(5)
+
+    gash_labels = [
+        ("💣", "BOMB"),
+        ("🎯", "PIN"),
+        ("🔥", "HOT"),
+        ("⚡", "PURE"),
+        ("🪄", "MAGIC")
+    ]
+
+    for col, (emoji, label) in zip(gash_cols, gash_labels):
+
+        with col:
+
+            st.button(
+                f"{emoji}\n{label}",
+                key=f"gash_{label}_{current_hole}"
+            )
+
+    # =====================================================
+    # PUTTS
+    # =====================================================
 
     st.markdown(
         "<div class='section-title'>PUTTS</div>",
         unsafe_allow_html=True
     )
 
-    putts = st.selectbox(
-        "PUTTS",
-        [0,1,2,3,4,5],
-        label_visibility="collapsed"
-    )
+    putt_cols = st.columns(6)
+
+    for i in range(6):
+
+        with putt_cols[i]:
+
+            st.button(
+                str(i),
+                key=f"putts_{i}_{current_hole}"
+            )
+
+    # =====================================================
+    # SCORE
+    # =====================================================
 
     st.markdown(
         "<div class='section-title'>SCORE</div>",
         unsafe_allow_html=True
     )
 
-    score = st.selectbox(
-        "SCORE",
-        list(range(1,15)),
-        index=hole["par"] - 1,
-        label_visibility="collapsed"
-    )
+    score_cols = st.columns(8)
+
+    for i in range(1, 9):
+
+        with score_cols[i - 1]:
+
+            st.button(
+                str(i),
+                key=f"score_{i}_{current_hole}"
+            )
+
+    # =====================================================
+    # NAVIGATION
+    # =====================================================
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -733,7 +819,7 @@ elif st.session_state.screen == "scorecard":
 
         if current_hole > 1:
 
-            if st.button("PREVIOUS"):
+            if st.button("PREVIOUS HOLE"):
 
                 st.session_state.current_hole -= 1
                 st.rerun()
@@ -742,7 +828,7 @@ elif st.session_state.screen == "scorecard":
 
         if current_hole < len(hole_data):
 
-            if st.button("NEXT"):
+            if st.button("NEXT HOLE"):
 
                 st.session_state.current_hole += 1
                 st.rerun()
