@@ -1,5 +1,4 @@
 import base64
-import json
 from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import quote, unquote
@@ -10,8 +9,7 @@ import streamlit as st
 st.set_page_config(page_title="GOLF", page_icon="⛳", layout="wide", initial_sidebar_state="collapsed")
 
 VIDEO_FILE = "GolfIntro.mp4"
-API_BASE_URL = "https://api.golfcourseapi.com"
-COURSE_INDEX_FILE = "course_index.json"
+OPENGOLF_API_BASE_URL = "https://api.opengolfapi.org/v1"
 
 MAIN_IMAGES = {
     "SCORE": "Main - Score.png",
@@ -51,14 +49,6 @@ US_STATES = {
     "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
 }
 
-COURSE_SWEEP_TERMS = [
-    "", "golf", "club", "country club", "course", "links", "national",
-    "municipal", "park", "valley", "lake", "lakes", "hills", "ridge",
-    "river", "creek", "woods", "meadows", "pointe", "point", "legacy",
-    "green", "greens", "oak", "oaks", "pine", "pines", "blue", "red",
-    "a", "e", "i", "o", "u", "r", "s", "t", "n", "l", "m", "c"
-]
-
 CLUBS = ["DR", "3W", "5W", "HYB", "4I", "5I", "6I", "7I", "8I", "9I", "PW", "GW", "SW", "LW"]
 
 TEE_LOCATIONS = ["LOST LEFT", "LEFT", "CENTER", "RIGHT", "LOST RIGHT"]
@@ -82,8 +72,13 @@ HAZARDS = ["OB", "GREEN BUNKER", "FAIRWAY BUNKER", "WATER", "DROP"]
 GASHES = ["DUFF", "HERO SHOT", "MISREAD", "UNDER CLUB", "BAD TARGET AREA"]
 
 
-def get_api_key():
-    return st.secrets.get("GOLF_API_KEY", "") or st.secrets.get("GOLF_COURSE_API_KEY", "")
+def get_opengolf_headers():
+    api_key = st.secrets.get("OPENGOLF_API_KEY", "")
+
+    if api_key:
+        return {"Authorization": f"Bearer {api_key}"}
+
+    return {}
 
 
 def local_image_base64(filename):
@@ -99,18 +94,12 @@ def local_image_base64(filename):
 
 
 @st.cache_data(show_spinner=False)
-def api_search_courses(search_query):
-    api_key = get_api_key()
-
-    if not api_key:
-        return []
-
+def opengolf_get_courses_by_state(state_abbrev):
     try:
         response = requests.get(
-            f"{API_BASE_URL}/v1/search",
-            headers={"Authorization": f"Key {api_key}"},
-            params={"search_query": search_query},
-            timeout=20
+            f"{OPENGOLF_API_BASE_URL}/courses/state/{state_abbrev}",
+            headers=get_opengolf_headers(),
+            timeout=25
         )
 
         if response.status_code != 200:
@@ -118,11 +107,16 @@ def api_search_courses(search_query):
 
         data = response.json()
 
-        if isinstance(data, dict):
-            return data.get("courses", []) or data.get("data", []) or []
-
         if isinstance(data, list):
             return data
+
+        if isinstance(data, dict):
+            return (
+                data.get("courses")
+                or data.get("data")
+                or data.get("results")
+                or []
+            )
 
         return []
 
@@ -131,17 +125,12 @@ def api_search_courses(search_query):
 
 
 @st.cache_data(show_spinner=False)
-def api_get_course_details(course_id):
-    api_key = get_api_key()
-
-    if not api_key:
-        return {}
-
+def opengolf_get_course_details(course_id):
     try:
         response = requests.get(
-            f"{API_BASE_URL}/v1/courses/{course_id}",
-            headers={"Authorization": f"Key {api_key}"},
-            timeout=20
+            f"{OPENGOLF_API_BASE_URL}/courses/{course_id}",
+            headers=get_opengolf_headers(),
+            timeout=25
         )
 
         if response.status_code != 200:
@@ -154,14 +143,20 @@ def api_get_course_details(course_id):
 
 
 def get_course_id(course):
-    return course.get("id") or course.get("course_id")
+    return (
+        course.get("id")
+        or course.get("course_id")
+        or course.get("uuid")
+        or course.get("slug")
+    )
 
 
 def get_course_name(course):
     return (
-        course.get("course_name")
-        or course.get("name")
+        course.get("name")
+        or course.get("course_name")
         or course.get("club_name")
+        or course.get("title")
         or "Unknown Course"
     )
 
@@ -173,6 +168,10 @@ def get_course_city(course):
     if isinstance(location, dict):
         city = city or location.get("city", "")
 
+    address = course.get("address", {})
+    if isinstance(address, dict):
+        city = city or address.get("city", "")
+
     return str(city).strip()
 
 
@@ -183,101 +182,11 @@ def get_course_state(course):
     if isinstance(location, dict):
         state = state or location.get("state", "")
 
+    address = course.get("address", {})
+    if isinstance(address, dict):
+        state = state or address.get("state", "")
+
     return str(state).upper().strip()
-
-
-def normalize_course(course):
-    return {
-        "id": get_course_id(course),
-        "name": get_course_name(course),
-        "city": get_course_city(course),
-        "state": get_course_state(course),
-        "raw": course
-    }
-
-
-def course_label_from_index(course):
-    name = course.get("name", "Unknown Course")
-    city = course.get("city", "")
-    state = course.get("state", "")
-
-    if city and state:
-        return f"{name} — {city}, {state}"
-
-    if state:
-        return f"{name} — {state}"
-
-    return name
-
-
-def load_course_index():
-    path = Path(COURSE_INDEX_FILE)
-
-    if not path.exists():
-        return []
-
-    try:
-        return json.loads(path.read_text())
-    except Exception:
-        return []
-
-
-def save_course_index(index):
-    Path(COURSE_INDEX_FILE).write_text(json.dumps(index, indent=2))
-
-
-def merge_courses(existing_index, new_courses):
-    merged = {}
-
-    for course in existing_index:
-        course_id = course.get("id")
-        if course_id:
-            merged[str(course_id)] = course
-
-    for course in new_courses:
-        normalized = normalize_course(course)
-        course_id = normalized.get("id")
-
-        if course_id:
-            merged[str(course_id)] = normalized
-
-    return list(merged.values())
-
-
-@st.cache_data(show_spinner=False)
-def discover_courses_for_state(state_name, state_abbrev):
-    discovered = []
-
-    search_terms = [state_name, state_abbrev] + COURSE_SWEEP_TERMS
-
-    for term in search_terms:
-        results = api_search_courses(term)
-
-        for course in results:
-            if get_course_state(course) == state_abbrev:
-                discovered.append(course)
-
-    normalized = {}
-
-    for course in discovered:
-        course_id = get_course_id(course)
-
-        if course_id:
-            normalized[str(course_id)] = normalize_course(course)
-
-    return sorted(
-        list(normalized.values()),
-        key=lambda c: (c.get("name", "").lower(), c.get("city", "").lower())
-    )
-
-
-def get_indexed_courses_for_state(state_abbrev):
-    index = load_course_index()
-
-    return sorted(
-        [c for c in index if c.get("state") == state_abbrev],
-        key=lambda c: (c.get("name", "").lower(), c.get("city", "").lower())
-    )
 
 
 def get_course_display_name(course):
@@ -287,67 +196,236 @@ def get_course_display_name(course):
 
     if city and state:
         return f"{name} — {city}, {state}"
+
     if state:
         return f"{name} — {state}"
+
     return name
 
 
-def get_tee_options(course_details):
-    tee_options = []
-    course_data = course_details.get("course", course_details)
-    tees = course_data.get("tees", {})
+def unwrap_course_detail(course_details):
+    if not isinstance(course_details, dict):
+        return {}
 
-    if not isinstance(tees, dict):
-        return tee_options
+    return (
+        course_details.get("course")
+        or course_details.get("data")
+        or course_details.get("result")
+        or course_details
+    )
 
-    for gender in ["male", "female"]:
-        for tee in tees.get(gender, []):
-            tee_name = tee.get("tee_name", "Unnamed Tee")
-            total_yards = tee.get("total_yards", "")
-            rating = tee.get("course_rating", "")
-            slope = tee.get("slope_rating", "")
 
-            parts = [tee_name]
+def value_from_keys(obj, keys, default=""):
+    if not isinstance(obj, dict):
+        return default
 
-            if total_yards:
-                parts.append(f"{total_yards} yds")
-            if rating:
-                parts.append(f"Rating {rating}")
-            if slope:
-                parts.append(f"Slope {slope}")
+    for key in keys:
+        if key in obj and obj.get(key) not in [None, ""]:
+            return obj.get(key)
 
-            parts.append(gender.title())
+    return default
 
-            tee_options.append({
-                "label": " • ".join(parts),
-                "tee": tee
-            })
 
-    return tee_options
+def list_from_keys(obj, keys):
+    if not isinstance(obj, dict):
+        return []
+
+    for key in keys:
+        value = obj.get(key)
+
+        if isinstance(value, list):
+            return value
+
+    return []
+
+
+def parse_hole_number(hole, fallback):
+    value = value_from_keys(hole, ["hole", "number", "hole_number", "num"], fallback)
+
+    try:
+        return int(value)
+    except Exception:
+        return fallback
+
+
+def parse_par(hole):
+    value = value_from_keys(hole, ["par"], 4)
+
+    try:
+        return int(value)
+    except Exception:
+        return 4
+
+
+def parse_yards(hole):
+    value = value_from_keys(
+        hole,
+        ["yards", "yardage", "distance", "length", "total_yards"],
+        0
+    )
+
+    try:
+        return int(value)
+    except Exception:
+        return 0
+
+
+def parse_handicap(hole):
+    return value_from_keys(
+        hole,
+        ["handicap", "hcp", "stroke_index", "strokeIndex"],
+        ""
+    )
 
 
 def get_holes_from_tee(tee):
+    holes = list_from_keys(tee, ["holes", "scorecard", "hole_data"])
+
     clean_holes = []
 
-    for index, hole in enumerate(tee.get("holes", []), start=1):
-        try:
-            par = int(hole.get("par", 4))
-        except Exception:
-            par = 4
+    if isinstance(holes, list) and holes:
+        for index, hole in enumerate(holes, start=1):
+            if not isinstance(hole, dict):
+                continue
 
-        try:
-            yards = int(hole.get("yards") or hole.get("yardage") or 0)
-        except Exception:
-            yards = 0
+            clean_holes.append({
+                "hole": parse_hole_number(hole, index),
+                "par": parse_par(hole),
+                "yards": parse_yards(hole),
+                "handicap": parse_handicap(hole)
+            })
 
-        clean_holes.append({
-            "hole": index,
-            "par": par,
-            "yards": yards,
-            "handicap": hole.get("handicap") or hole.get("hcp") or ""
-        })
+    if clean_holes:
+        return clean_holes
+
+    yardages = list_from_keys(tee, ["yards", "yardages", "hole_yardages", "distances"])
+    pars = list_from_keys(tee, ["pars", "par"])
+    handicaps = list_from_keys(tee, ["handicaps", "hcp", "stroke_indexes"])
+
+    if isinstance(yardages, list) and yardages:
+        for index, yard_value in enumerate(yardages, start=1):
+            try:
+                yards = int(yard_value)
+            except Exception:
+                yards = 0
+
+            try:
+                par = int(pars[index - 1]) if index - 1 < len(pars) else 4
+            except Exception:
+                par = 4
+
+            handicap = handicaps[index - 1] if index - 1 < len(handicaps) else ""
+
+            clean_holes.append({
+                "hole": index,
+                "par": par,
+                "yards": yards,
+                "handicap": handicap
+            })
 
     return clean_holes
+
+
+def tee_label(tee):
+    name = value_from_keys(
+        tee,
+        ["tee_name", "name", "label", "color", "title"],
+        "Unnamed Tee"
+    )
+
+    total_yards = value_from_keys(
+        tee,
+        ["total_yards", "yards_total", "yardage", "length"],
+        ""
+    )
+
+    rating = value_from_keys(
+        tee,
+        ["course_rating", "rating", "usga_rating"],
+        ""
+    )
+
+    slope = value_from_keys(
+        tee,
+        ["slope_rating", "slope"],
+        ""
+    )
+
+    gender = value_from_keys(
+        tee,
+        ["gender", "sex"],
+        ""
+    )
+
+    parts = [str(name)]
+
+    if total_yards:
+        parts.append(f"{total_yards} yds")
+    if rating:
+        parts.append(f"Rating {rating}")
+    if slope:
+        parts.append(f"Slope {slope}")
+    if gender:
+        parts.append(str(gender).title())
+
+    return " • ".join(parts)
+
+
+def collect_tee_candidates(obj):
+    candidates = []
+
+    if isinstance(obj, dict):
+        has_holes = isinstance(obj.get("holes"), list)
+        has_yardages = any(isinstance(obj.get(k), list) for k in ["yards", "yardages", "hole_yardages", "distances"])
+        has_name = any(k in obj for k in ["tee_name", "name", "label", "color", "title"])
+
+        if has_name and (has_holes or has_yardages):
+            candidates.append(obj)
+
+        for key, value in obj.items():
+            if key in ["holes"]:
+                continue
+            candidates.extend(collect_tee_candidates(value))
+
+    elif isinstance(obj, list):
+        for item in obj:
+            candidates.extend(collect_tee_candidates(item))
+
+    return candidates
+
+
+def get_tee_options(course_details):
+    course_data = unwrap_course_detail(course_details)
+    tee_options = []
+
+    old_style_tees = course_data.get("tees", {})
+
+    if isinstance(old_style_tees, dict):
+        for gender in ["male", "female"]:
+            for tee in old_style_tees.get(gender, []):
+                if isinstance(tee, dict):
+                    label = tee_label({**tee, "gender": gender})
+                    tee_options.append({"label": label, "tee": tee})
+
+    candidates = collect_tee_candidates(course_data)
+
+    seen = set()
+
+    for tee in tee_options:
+        key = tee["label"]
+        seen.add(key)
+
+    for tee in candidates:
+        label = tee_label(tee)
+
+        if label not in seen:
+            tee_options.append({
+                "label": label,
+                "tee": tee
+            })
+            seen.add(label)
+
+    return tee_options
 
 
 def get_tee_quality_options(par):
@@ -409,7 +487,6 @@ def tee_cell_color(par, location, quality):
 
     lost = location in ["LOST LEFT", "LOST RIGHT"]
     side = location in ["LEFT", "RIGHT"]
-    center = location == "CENTER"
 
     if int(par) == 3:
         if quality == "TOO LONG":
@@ -1121,44 +1198,35 @@ elif st.session_state.screen == "start_round":
     selected_state_abbrev = US_STATES[selected_state_name]
 
     st.markdown(
-        "<div class='api-note'>Courses are saved into a local course index, then filtered by state.</div>",
+        "<div class='api-note'>Course list and tee data are powered by OpenGolfAPI.</div>",
         unsafe_allow_html=True
     )
 
-    if st.button("UPDATE COURSE INDEX"):
-        with st.spinner("Searching API and updating local course index..."):
-            discovered = discover_courses_for_state(selected_state_name, selected_state_abbrev)
-            current_index = load_course_index()
-            updated_index = merge_courses(current_index, [c["raw"] for c in discovered])
-            save_course_index(updated_index)
-
-        st.success(f"Course index updated. Found {len(discovered)} courses for {selected_state_name}.")
-        st.rerun()
-
-    state_courses = get_indexed_courses_for_state(selected_state_abbrev)
+    with st.spinner("Loading courses..."):
+        state_courses = opengolf_get_courses_by_state(selected_state_abbrev)
 
     if not state_courses:
-        st.warning("No courses saved for this state yet. Tap UPDATE COURSE INDEX.")
+        st.warning("No courses were returned for this state by OpenGolfAPI.")
         st.stop()
 
     course_options = {
-        course_label_from_index(course): course
-        for course in state_courses
+        get_course_display_name(course): course
+        for course in sorted(state_courses, key=lambda c: get_course_display_name(c).lower())
     }
 
     selected_course_label = st.selectbox("COURSE", list(course_options.keys()))
     selected_course = course_options[selected_course_label]
-    course_id = selected_course.get("id")
+    course_id = get_course_id(selected_course)
 
     if not course_id:
         st.warning("This course does not include a usable course ID.")
         st.stop()
 
     with st.spinner("Loading tees..."):
-        course_details = api_get_course_details(course_id)
+        course_details = opengolf_get_course_details(course_id)
 
     if not course_details:
-        st.warning("Could not load course details from the Golf Course API.")
+        st.warning("Could not load course details from OpenGolfAPI.")
         st.stop()
 
     tee_options = get_tee_options(course_details)
