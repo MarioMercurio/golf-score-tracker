@@ -111,12 +111,7 @@ def opengolf_get_courses_by_state(state_abbrev):
             return data
 
         if isinstance(data, dict):
-            return (
-                data.get("courses")
-                or data.get("data")
-                or data.get("results")
-                or []
-            )
+            return data.get("courses") or data.get("data") or data.get("results") or []
 
         return []
 
@@ -134,12 +129,15 @@ def opengolf_get_course_details(course_id):
         )
 
         if response.status_code != 200:
-            return {}
+            return {
+                "_debug_status_code": response.status_code,
+                "_debug_text": response.text[:2000]
+            }
 
         return response.json()
 
-    except Exception:
-        return {}
+    except Exception as e:
+        return {"_debug_error": str(e)}
 
 
 def get_course_id(course):
@@ -376,10 +374,10 @@ def collect_tee_candidates(obj):
 
     if isinstance(obj, dict):
         has_holes = isinstance(obj.get("holes"), list)
-        has_yardages = any(isinstance(obj.get(k), list) for k in ["yards", "yardages", "hole_yardages", "distances"])
+        has_yardage_list = any(isinstance(obj.get(k), list) for k in ["yards", "yardages", "hole_yardages", "distances"])
         has_name = any(k in obj for k in ["tee_name", "name", "label", "color", "title"])
 
-        if has_name and (has_holes or has_yardages):
+        if has_name and (has_holes or has_yardage_list):
             candidates.append(obj)
 
         for key, value in obj.items():
@@ -407,13 +405,17 @@ def get_tee_options(course_details):
                     label = tee_label({**tee, "gender": gender})
                     tee_options.append({"label": label, "tee": tee})
 
+    if isinstance(old_style_tees, list):
+        for tee in old_style_tees:
+            if isinstance(tee, dict):
+                tee_options.append({"label": tee_label(tee), "tee": tee})
+
     candidates = collect_tee_candidates(course_data)
 
     seen = set()
 
     for tee in tee_options:
-        key = tee["label"]
-        seen.add(key)
+        seen.add(tee["label"])
 
     for tee in candidates:
         label = tee_label(tee)
@@ -1224,6 +1226,11 @@ elif st.session_state.screen == "start_round":
 
     with st.spinner("Loading tees..."):
         course_details = opengolf_get_course_details(course_id)
+
+    st.markdown("<div class='api-note'>Debug data is temporarily shown below so we can map OpenGolfAPI tee boxes correctly.</div>", unsafe_allow_html=True)
+
+    with st.expander("OPEN GOLF API DEBUG - COURSE DETAILS", expanded=False):
+        st.write(course_details)
 
     if not course_details:
         st.warning("Could not load course details from OpenGolfAPI.")
