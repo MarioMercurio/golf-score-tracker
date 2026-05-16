@@ -135,20 +135,6 @@ def get_course_state(course):
     return str(state).upper().strip()
 
 
-def get_course_display_name(course):
-    name = get_course_name(course)
-    city = get_course_city(course)
-    state = get_course_state(course)
-
-    if city and state:
-        return f"{name} — {city}, {state}"
-
-    if state:
-        return f"{name} — {state}"
-
-    return name
-
-
 def normalize_course(course):
     return {
         "id": get_course_id(course),
@@ -172,8 +158,7 @@ def load_course_index():
 
 
 def save_course_index(index):
-    path = Path(COURSE_INDEX_FILE)
-    path.write_text(json.dumps(index, indent=2))
+    Path(COURSE_INDEX_FILE).write_text(json.dumps(index, indent=2))
 
 
 def merge_courses(existing_index, new_courses):
@@ -204,9 +189,7 @@ def discover_courses_for_state(state_name, state_abbrev):
         results = api_search_courses(term)
 
         for course in results:
-            course_state = get_course_state(course)
-
-            if course_state == state_abbrev:
+            if get_course_state(course) == state_abbrev:
                 discovered.append(course)
 
     normalized = {}
@@ -304,7 +287,9 @@ def get_holes_from_tee(tee):
             "hole": index,
             "par": par,
             "yards": yards,
-            "handicap": hole.get("handicap") or hole.get("hcp") or ""
+            "handicap": hole.get("handicap") or hole.get("hcp") or "",
+            "score": par,
+            "putts": 2
         })
 
     return clean_holes
@@ -379,6 +364,44 @@ body,
     margin-bottom: 45px;
 }
 
+.score-title {
+    text-align: center;
+    color: #5BE06C;
+    font-size: 58px;
+    font-weight: 900;
+    line-height: 1;
+    margin-top: 10px;
+    margin-bottom: 16px;
+}
+
+.score-subtitle {
+    text-align: center;
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+
+.hole-card {
+    background: #191919;
+    border: 2px solid #333333;
+    padding: 18px;
+    margin-bottom: 18px;
+}
+
+.hole-title {
+    color: #5BE06C;
+    font-size: 34px;
+    font-weight: 900;
+    margin-bottom: 8px;
+}
+
+.hole-info {
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+}
+
 label {
     color: white !important;
     font-size: 22px !important;
@@ -437,6 +460,22 @@ div[data-testid="stAlert"] {
     .start-title {
         font-size: 58px;
         margin-bottom: 28px;
+    }
+
+    .score-title {
+        font-size: 42px;
+    }
+
+    .score-subtitle {
+        font-size: 16px;
+    }
+
+    .hole-title {
+        font-size: 28px;
+    }
+
+    .hole-info {
+        font-size: 18px;
     }
 
     label {
@@ -531,8 +570,6 @@ elif st.session_state.screen == "start_round":
         unsafe_allow_html=True
     )
 
-    existing_state_courses = get_indexed_courses_for_state(selected_state_abbrev)
-
     if st.button("UPDATE COURSE INDEX"):
         with st.spinner("Searching API and updating local course index..."):
             discovered = discover_courses_for_state(selected_state, selected_state_abbrev)
@@ -605,3 +642,71 @@ elif st.session_state.screen == "start_round":
         st.session_state.hole_data = tee_holes
         st.session_state.screen = "scorecard"
         st.rerun()
+
+
+elif st.session_state.screen == "scorecard":
+
+    st.markdown(
+        f"<div class='score-title'>{st.session_state.course}</div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        f"<div class='score-subtitle'>{st.session_state.tee}</div>",
+        unsafe_allow_html=True
+    )
+
+    total_score = 0
+    total_par = 0
+
+    for hole in st.session_state.hole_data:
+        hole_num = hole["hole"]
+        par = hole["par"]
+        yards = hole["yards"]
+        handicap = hole["handicap"]
+
+        st.markdown(
+            f"""
+            <div class='hole-card'>
+                <div class='hole-title'>HOLE {hole_num}</div>
+                <div class='hole-info'>PAR {par} • {yards} YDS • HDCP {handicap}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        score = st.number_input(
+            f"Score Hole {hole_num}",
+            min_value=1,
+            max_value=20,
+            value=par,
+            step=1,
+            key=f"score_{hole_num}"
+        )
+
+        total_score += score
+        total_par += par
+
+    relation = total_score - total_par
+    relation_text = "E" if relation == 0 else f"+{relation}" if relation > 0 else str(relation)
+
+    st.markdown(
+        f"""
+        <div style='color:white; text-align:center; font-size:42px; font-weight:900; margin:35px 0;'>
+            TOTAL: {total_score} ({relation_text})
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("BACK"):
+            st.session_state.screen = "start_round"
+            st.rerun()
+
+    with col2:
+        if st.button("FINISH"):
+            st.session_state.screen = "home"
+            st.rerun()
