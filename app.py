@@ -1,5 +1,5 @@
 import base64
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -9,7 +9,7 @@ import streamlit as st
 st.set_page_config(page_title="GOLF", page_icon="⛳", layout="wide", initial_sidebar_state="collapsed")
 
 VIDEO_FILE = "GolfIntro.mp4"
-OPENGOLF_API_BASE_URL = "https://api.opengolfapi.org/v1"
+API_BASE_URL = "https://api.golfcourseapi.com"
 
 MAIN_IMAGES = {
     "SCORE": "Main - Score.png",
@@ -72,13 +72,8 @@ HAZARDS = ["OB", "GREEN BUNKER", "FAIRWAY BUNKER", "WATER", "DROP"]
 GASHES = ["DUFF", "HERO SHOT", "MISREAD", "UNDER CLUB", "BAD TARGET AREA"]
 
 
-def get_opengolf_headers():
-    api_key = st.secrets.get("OPENGOLF_API_KEY", "")
-
-    if api_key:
-        return {"Authorization": f"Bearer {api_key}"}
-
-    return {}
+def get_api_key():
+    return st.secrets.get("GOLF_API_KEY", "") or st.secrets.get("GOLF_COURSE_API_KEY", "")
 
 
 def local_image_base64(filename):
@@ -94,83 +89,68 @@ def local_image_base64(filename):
 
 
 @st.cache_data(show_spinner=False)
-def opengolf_get_courses_by_state(state_abbrev):
+def api_search_courses(search_query):
+    api_key = get_api_key()
+
+    if not api_key:
+        return []
+
     try:
         response = requests.get(
-            f"{OPENGOLF_API_BASE_URL}/courses/state/{state_abbrev}",
-            headers=get_opengolf_headers(),
-            timeout=25
+            f"{API_BASE_URL}/v1/search",
+            headers={"Authorization": f"Key {api_key}"},
+            params={"search_query": search_query},
+            timeout=20
         )
 
         if response.status_code != 200:
             return []
 
         data = response.json()
-
-        if isinstance(data, list):
-            return data
-
-        if isinstance(data, dict):
-            return data.get("courses") or data.get("data") or data.get("results") or []
-
-        return []
+        return data.get("courses", []) if isinstance(data, dict) else []
 
     except Exception:
         return []
 
 
 @st.cache_data(show_spinner=False)
-def opengolf_get_course_details(course_id):
+def api_get_course_details(course_id):
+    api_key = get_api_key()
+
+    if not api_key:
+        return {}
+
     try:
         response = requests.get(
-            f"{OPENGOLF_API_BASE_URL}/courses/{course_id}",
-            headers=get_opengolf_headers(),
-            timeout=25
+            f"{API_BASE_URL}/v1/courses/{course_id}",
+            headers={"Authorization": f"Key {api_key}"},
+            timeout=20
         )
 
         if response.status_code != 200:
-            return {
-                "_debug_status_code": response.status_code,
-                "_debug_text": response.text[:2000]
-            }
+            return {}
 
         return response.json()
 
-    except Exception as e:
-        return {"_debug_error": str(e)}
+    except Exception:
+        return {}
 
 
-def get_course_id(course):
-    return (
-        course.get("id")
-        or course.get("course_id")
-        or course.get("uuid")
-        or course.get("slug")
-    )
-
-
-def get_course_name(course):
-    return (
-        course.get("name")
-        or course.get("course_name")
-        or course.get("club_name")
-        or course.get("title")
-        or "Unknown Course"
-    )
-
-
-def get_course_city(course):
+def get_course_display_name(course):
+    name = course.get("course_name") or course.get("name") or course.get("club_name") or "Unknown Course"
     city = course.get("city", "")
+    state = course.get("state", "")
 
     location = course.get("location", {})
     if isinstance(location, dict):
         city = city or location.get("city", "")
+        state = state or location.get("state", "")
 
-    address = course.get("address", {})
-    if isinstance(address, dict):
-        city = city or address.get("city", "")
-
-    return str(city).strip()
+    if city and state:
+        return f"{name} — {city}, {state}"
+    if state:
+        return f"{name} — {state}"
+    return name
 
 
 def get_course_state(course):
@@ -180,254 +160,73 @@ def get_course_state(course):
     if isinstance(location, dict):
         state = state or location.get("state", "")
 
-    address = course.get("address", {})
-    if isinstance(address, dict):
-        state = state or address.get("state", "")
-
     return str(state).upper().strip()
 
 
-def get_course_display_name(course):
-    name = get_course_name(course)
-    city = get_course_city(course)
-    state = get_course_state(course)
-
-    if city and state:
-        return f"{name} — {city}, {state}"
-
-    if state:
-        return f"{name} — {state}"
-
-    return name
+def filter_courses_by_state(courses, state_abbrev):
+    return [course for course in courses if get_course_state(course) == state_abbrev.upper()]
 
 
-def unwrap_course_detail(course_details):
-    if not isinstance(course_details, dict):
-        return {}
-
-    return (
-        course_details.get("course")
-        or course_details.get("data")
-        or course_details.get("result")
-        or course_details
-    )
-
-
-def value_from_keys(obj, keys, default=""):
-    if not isinstance(obj, dict):
-        return default
-
-    for key in keys:
-        if key in obj and obj.get(key) not in [None, ""]:
-            return obj.get(key)
-
-    return default
-
-
-def list_from_keys(obj, keys):
-    if not isinstance(obj, dict):
-        return []
-
-    for key in keys:
-        value = obj.get(key)
-
-        if isinstance(value, list):
-            return value
-
-    return []
-
-
-def parse_hole_number(hole, fallback):
-    value = value_from_keys(hole, ["hole", "number", "hole_number", "num"], fallback)
-
-    try:
-        return int(value)
-    except Exception:
-        return fallback
-
-
-def parse_par(hole):
-    value = value_from_keys(hole, ["par"], 4)
-
-    try:
-        return int(value)
-    except Exception:
-        return 4
-
-
-def parse_yards(hole):
-    value = value_from_keys(
-        hole,
-        ["yards", "yardage", "distance", "length", "total_yards"],
-        0
-    )
-
-    try:
-        return int(value)
-    except Exception:
-        return 0
-
-
-def parse_handicap(hole):
-    return value_from_keys(
-        hole,
-        ["handicap", "hcp", "stroke_index", "strokeIndex"],
-        ""
-    )
-
-
-def get_holes_from_tee(tee):
-    holes = list_from_keys(tee, ["holes", "scorecard", "hole_data"])
-
-    clean_holes = []
-
-    if isinstance(holes, list) and holes:
-        for index, hole in enumerate(holes, start=1):
-            if not isinstance(hole, dict):
-                continue
-
-            clean_holes.append({
-                "hole": parse_hole_number(hole, index),
-                "par": parse_par(hole),
-                "yards": parse_yards(hole),
-                "handicap": parse_handicap(hole)
-            })
-
-    if clean_holes:
-        return clean_holes
-
-    yardages = list_from_keys(tee, ["yards", "yardages", "hole_yardages", "distances"])
-    pars = list_from_keys(tee, ["pars", "par"])
-    handicaps = list_from_keys(tee, ["handicaps", "hcp", "stroke_indexes"])
-
-    if isinstance(yardages, list) and yardages:
-        for index, yard_value in enumerate(yardages, start=1):
-            try:
-                yards = int(yard_value)
-            except Exception:
-                yards = 0
-
-            try:
-                par = int(pars[index - 1]) if index - 1 < len(pars) else 4
-            except Exception:
-                par = 4
-
-            handicap = handicaps[index - 1] if index - 1 < len(handicaps) else ""
-
-            clean_holes.append({
-                "hole": index,
-                "par": par,
-                "yards": yards,
-                "handicap": handicap
-            })
-
-    return clean_holes
-
-
-def tee_label(tee):
-    name = value_from_keys(
-        tee,
-        ["tee_name", "name", "label", "color", "title"],
-        "Unnamed Tee"
-    )
-
-    total_yards = value_from_keys(
-        tee,
-        ["total_yards", "yards_total", "yardage", "length"],
-        ""
-    )
-
-    rating = value_from_keys(
-        tee,
-        ["course_rating", "rating", "usga_rating"],
-        ""
-    )
-
-    slope = value_from_keys(
-        tee,
-        ["slope_rating", "slope"],
-        ""
-    )
-
-    gender = value_from_keys(
-        tee,
-        ["gender", "sex"],
-        ""
-    )
-
-    parts = [str(name)]
-
-    if total_yards:
-        parts.append(f"{total_yards} yds")
-    if rating:
-        parts.append(f"Rating {rating}")
-    if slope:
-        parts.append(f"Slope {slope}")
-    if gender:
-        parts.append(str(gender).title())
-
-    return " • ".join(parts)
-
-
-def collect_tee_candidates(obj):
-    candidates = []
-
-    if isinstance(obj, dict):
-        has_holes = isinstance(obj.get("holes"), list)
-        has_yardage_list = any(isinstance(obj.get(k), list) for k in ["yards", "yardages", "hole_yardages", "distances"])
-        has_name = any(k in obj for k in ["tee_name", "name", "label", "color", "title"])
-
-        if has_name and (has_holes or has_yardage_list):
-            candidates.append(obj)
-
-        for key, value in obj.items():
-            if key in ["holes"]:
-                continue
-            candidates.extend(collect_tee_candidates(value))
-
-    elif isinstance(obj, list):
-        for item in obj:
-            candidates.extend(collect_tee_candidates(item))
-
-    return candidates
+def get_course_id(course):
+    return course.get("id") or course.get("course_id")
 
 
 def get_tee_options(course_details):
-    course_data = unwrap_course_detail(course_details)
     tee_options = []
+    course_data = course_details.get("course", course_details)
+    tees = course_data.get("tees", {})
 
-    old_style_tees = course_data.get("tees", {})
+    if not isinstance(tees, dict):
+        return tee_options
 
-    if isinstance(old_style_tees, dict):
-        for gender in ["male", "female"]:
-            for tee in old_style_tees.get(gender, []):
-                if isinstance(tee, dict):
-                    label = tee_label({**tee, "gender": gender})
-                    tee_options.append({"label": label, "tee": tee})
+    for gender in ["male", "female"]:
+        for tee in tees.get(gender, []):
+            tee_name = tee.get("tee_name", "Unnamed Tee")
+            total_yards = tee.get("total_yards", "")
+            rating = tee.get("course_rating", "")
+            slope = tee.get("slope_rating", "")
 
-    if isinstance(old_style_tees, list):
-        for tee in old_style_tees:
-            if isinstance(tee, dict):
-                tee_options.append({"label": tee_label(tee), "tee": tee})
+            parts = [tee_name]
 
-    candidates = collect_tee_candidates(course_data)
+            if total_yards:
+                parts.append(f"{total_yards} yds")
+            if rating:
+                parts.append(f"Rating {rating}")
+            if slope:
+                parts.append(f"Slope {slope}")
 
-    seen = set()
+            parts.append(gender.title())
 
-    for tee in tee_options:
-        seen.add(tee["label"])
-
-    for tee in candidates:
-        label = tee_label(tee)
-
-        if label not in seen:
             tee_options.append({
-                "label": label,
+                "label": " • ".join(parts),
                 "tee": tee
             })
-            seen.add(label)
 
     return tee_options
+
+
+def get_holes_from_tee(tee):
+    clean_holes = []
+
+    for index, hole in enumerate(tee.get("holes", []), start=1):
+        try:
+            par = int(hole.get("par", 4))
+        except Exception:
+            par = 4
+
+        try:
+            yards = int(hole.get("yards") or hole.get("yardage") or 0)
+        except Exception:
+            yards = 0
+
+        clean_holes.append({
+            "hole": index,
+            "par": par,
+            "yards": yards,
+            "handicap": hole.get("handicap") or hole.get("hcp") or ""
+        })
+
+    return clean_holes
 
 
 def get_tee_quality_options(par):
@@ -1182,58 +981,61 @@ if st.session_state.screen == "home":
 elif st.session_state.screen == "start_round":
     st.markdown("<div class='start-title'>START ROUND</div>", unsafe_allow_html=True)
 
-    today = date.today()
-    upcoming_dates = [today + timedelta(days=i) for i in range(365)]
-    formatted_dates = [d.strftime("%A, %B %d, %Y") for d in upcoming_dates]
-
-    selected_date_label = st.selectbox("DATE", formatted_dates, index=0)
-    round_date = upcoming_dates[formatted_dates.index(selected_date_label)]
-
-    state_names = list(US_STATES.keys())
+    round_date = st.date_input("DATE", value=date.today())
 
     selected_state_name = st.selectbox(
         "STATE",
-        state_names,
-        index=state_names.index("Kentucky")
+        list(US_STATES.keys()),
+        index=list(US_STATES.keys()).index("Kentucky")
     )
 
-    selected_state_abbrev = US_STATES[selected_state_name]
+    selected_state = US_STATES[selected_state_name]
+
+    search_query = st.text_input(
+        "COURSE SEARCH",
+        value="",
+        placeholder="Type course name..."
+    )
 
     st.markdown(
-        "<div class='api-note'>Course list and tee data are powered by OpenGolfAPI.</div>",
+        "<div class='api-note'>Course search, tee boxes and hole yardages are powered by the Golf Course API.</div>",
         unsafe_allow_html=True
     )
 
-    with st.spinner("Loading courses..."):
-        state_courses = opengolf_get_courses_by_state(selected_state_abbrev)
-
-    if not state_courses:
-        st.warning("No courses were returned for this state by OpenGolfAPI.")
+    if not get_api_key():
+        st.error("Missing Golf API key. Add GOLF_API_KEY to Streamlit secrets.")
         st.stop()
 
-    course_options = {
-        get_course_display_name(course): course
-        for course in sorted(state_courses, key=lambda c: get_course_display_name(c).lower())
-    }
+    if not search_query.strip():
+        st.info("Type a course name to search.")
+        st.stop()
 
-    selected_course_label = st.selectbox("COURSE", list(course_options.keys()))
-    selected_course = course_options[selected_course_label]
-    course_id = get_course_id(selected_course)
+    api_matches = api_search_courses(search_query.strip())
+
+    if not api_matches:
+        st.warning("No API course matches found. Try a more specific course name.")
+        st.stop()
+
+    state_matches = filter_courses_by_state(api_matches, selected_state)
+    courses_to_show = state_matches if state_matches else api_matches
+
+    if not state_matches:
+        st.warning(f"No exact matches found in {selected_state_name}. Showing all API matches.")
+
+    api_match_labels = [get_course_display_name(course) for course in courses_to_show]
+    selected_match_label = st.selectbox("COURSE", api_match_labels)
+
+    selected_match = courses_to_show[api_match_labels.index(selected_match_label)]
+    course_id = get_course_id(selected_match)
 
     if not course_id:
-        st.warning("This course does not include a usable course ID.")
+        st.warning("This API match does not include a course ID.")
         st.stop()
 
-    with st.spinner("Loading tees..."):
-        course_details = opengolf_get_course_details(course_id)
-
-    st.markdown("<div class='api-note'>Debug data is temporarily shown below so we can map OpenGolfAPI tee boxes correctly.</div>", unsafe_allow_html=True)
-
-    with st.expander("OPEN GOLF API DEBUG - COURSE DETAILS", expanded=False):
-        st.write(course_details)
+    course_details = api_get_course_details(course_id)
 
     if not course_details:
-        st.warning("Could not load course details from OpenGolfAPI.")
+        st.warning("Could not load course details from API.")
         st.stop()
 
     tee_options = get_tee_options(course_details)
@@ -1259,11 +1061,16 @@ elif st.session_state.screen == "start_round":
     else:
         holes = st.selectbox("HOLES", [max_holes])
 
-    st.success("Course loaded successfully.")
-
     if st.button("START ROUND"):
-        st.session_state.course = selected_course_label
-        st.session_state.api_course = selected_course_label
+        clean_course_name = (
+            selected_match.get("course_name")
+            or selected_match.get("name")
+            or selected_match.get("club_name")
+            or selected_match_label
+        )
+
+        st.session_state.course = clean_course_name
+        st.session_state.api_course = selected_match_label
         st.session_state.tee = selected_tee_label
         st.session_state.holes = holes
         st.session_state.hole_data = tee_holes[:holes]
