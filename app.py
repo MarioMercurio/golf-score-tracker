@@ -491,17 +491,20 @@ div[data-baseweb="select"] > div { min-height: 58px !important; font-size: 22px 
 
 .native-card {
     background: #191919;
-    padding: 0 0 8px 0;
-    margin-bottom: 8px;
+    padding: 0;
+    margin-bottom: 0;
+    border-radius: 0;
+    overflow: hidden;
 }
 
 .native-card-title {
     color: white;
     text-align: center;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 1000;
-    padding: 6px 2px 0 2px;
-    min-height: 34px;
+    padding: 7px 2px 0 2px;
+    min-height: 30px;
+    line-height: 1.05;
 }
 
 .native-card-value {
@@ -510,7 +513,7 @@ div[data-baseweb="select"] > div { min-height: 58px !important; font-size: 22px 
     font-size: 58px;
     font-weight: 1000;
     line-height: 1;
-    padding: 14px 0 10px 0;
+    padding: 12px 0 12px 0;
 }
 
 .native-tee-box {
@@ -519,16 +522,27 @@ div[data-baseweb="select"] > div { min-height: 58px !important; font-size: 22px 
     font-weight: 1000;
     font-size: 11px;
     padding: 7px 2px;
-    margin-bottom: 3px;
+    margin-bottom: 0px;
     min-height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 2px solid transparent;
+    box-sizing: border-box;
 }
 
 .native-tee-box.selected {
-    outline: 3px solid white;
+    border: 4px solid white;
     box-shadow: 0 0 0 2px #4DDB68;
+}
+
+.native-tap-note {
+    color: #4DDB68;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 1000;
+    margin: -10px 0 8px 0;
+    letter-spacing: .4px;
 }
 
 .native-img-wrap img {
@@ -569,7 +583,7 @@ div[data-baseweb="select"] > div { min-height: 58px !important; font-size: 22px 
     .big-label { font-size: 38px; margin-top: 12px; }
     .section-title { font-size: 42px; line-height: 1; margin-top: 20px; margin-bottom: 16px; }
     .white-line { margin: 24px 0 18px 0; border-top: 4px solid white; }
-    .stButton > button { min-height: 48px !important; font-size: 16px !important; }
+    .stButton > button { min-height: 42px !important; font-size: 15px !important; padding: 0 !important; border-radius: 0 !important; }
     .tee-html-grid { gap: 4px; }
     .tee-col-title { font-size: 9.5px; line-height: 1; margin-bottom: 4px; min-height: 18px; }
     .tee-tile { height: 38px; margin-bottom: 4px; font-size: 8.7px; border: 1px solid transparent; padding: 0 1px; letter-spacing: -0.2px; }
@@ -720,7 +734,7 @@ def render_tee_shot_grid(hole_num, entry):
                     f"<div class='native-tee-box{selected_class}' style='background:{color};'>{quality}</div>",
                     unsafe_allow_html=True,
                 )
-                if st.button("SELECT", key=f"tee_btn_{hole_num}_{location}_{quality}"):
+                if st.button("TAP", key=f"tee_btn_{hole_num}_{location}_{quality}"):
                     set_value(hole_num, "tee_location", location)
                     set_value(hole_num, "tee_quality", quality)
                     backup_active_round()
