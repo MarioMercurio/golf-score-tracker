@@ -487,6 +487,70 @@ div[data-baseweb="select"] > div { min-height: 58px !important; font-size: 22px 
 .stats-metric-label { color: #AAAAAA; font-size: 16px; font-weight: 900; margin-bottom: 8px; }
 .stats-metric-value { color: #4DDB68; font-size: 42px; font-weight: 1000; line-height: 1; }
 .stats-table-title { color: white; font-size: 28px; font-weight: 1000; margin-top: 24px; margin-bottom: 8px; }
+
+
+.native-card {
+    background: #191919;
+    padding: 0 0 8px 0;
+    margin-bottom: 8px;
+}
+
+.native-card-title {
+    color: white;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 1000;
+    padding: 6px 2px 0 2px;
+    min-height: 34px;
+}
+
+.native-card-value {
+    color: white;
+    text-align: center;
+    font-size: 58px;
+    font-weight: 1000;
+    line-height: 1;
+    padding: 14px 0 10px 0;
+}
+
+.native-tee-box {
+    color: black;
+    text-align: center;
+    font-weight: 1000;
+    font-size: 11px;
+    padding: 7px 2px;
+    margin-bottom: 3px;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.native-tee-box.selected {
+    outline: 3px solid white;
+    box-shadow: 0 0 0 2px #4DDB68;
+}
+
+.native-img-wrap img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
+}
+
+.native-img-fallback {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #333333;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    text-align: center;
+    font-size: 14px;
+}
+
 @media (max-width: 768px) {
     .block-container { padding-left: .45rem; padding-right: .45rem; padding-top: .35rem; max-width: 100%; }
     .start-title { font-size: 46px; margin-bottom: 24px; }
@@ -597,12 +661,21 @@ def process_query_params(hole_num):
 
 
 def render_compact_hole_header(hole_num, entry):
+    nav1, nav2, nav3 = st.columns([1, 4, 1])
+    with nav1:
+        if st.button("◀", key=f"prev_hole_{hole_num}"):
+            st.session_state.current_hole_index = max(0, int(st.session_state.get("current_hole_index", 0)) - 1)
+            backup_active_round()
+            st.rerun()
+    with nav2:
+        st.markdown(f"<div class='hole-nav-current'>HOLE {hole_num}</div>", unsafe_allow_html=True)
+    with nav3:
+        if st.button("▶", key=f"next_hole_{hole_num}"):
+            st.session_state.current_hole_index = min(len(st.session_state.hole_data) - 1, int(st.session_state.get("current_hole_index", 0)) + 1)
+            backup_active_round()
+            st.rerun()
+
     st.markdown(f"""
-        <div class="hole-nav-row">
-            <a class="hole-nav-btn" href="?hole_nav={quote('prev')}">◀</a>
-            <div class="hole-nav-current">HOLE {hole_num}</div>
-            <a class="hole-nav-btn" href="?hole_nav={quote('next')}">▶</a>
-        </div>
         <div class="compact-hole-card">
             <div class="compact-hole-title">HOLE {hole_num}</div>
             <div class="compact-hole-meta">
@@ -619,61 +692,118 @@ def render_tee_shot_grid(hole_num, entry):
     quality_options = get_tee_quality_options(par)
     if entry["tee_quality"] not in quality_options:
         entry["tee_quality"] = get_default_tee_quality(par)
+
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>TEE SHOT</div>", unsafe_allow_html=True)
     grid_type = "PAR 3 TEE SHOT GRID" if par == 3 else "PAR 4 / PAR 5 TEE SHOT GRID"
     st.markdown(f"<div class='tee-grid-caption'>{grid_type}</div>", unsafe_allow_html=True)
-    selected_club = st.selectbox("CLUB", CLUBS, index=CLUBS.index(entry["tee_club"]) if entry["tee_club"] in CLUBS else 0, key=f"club_{hole_num}")
+
+    selected_club = st.selectbox(
+        "CLUB",
+        CLUBS,
+        index=CLUBS.index(entry["tee_club"]) if entry["tee_club"] in CLUBS else 0,
+        key=f"club_{hole_num}",
+    )
     set_value(hole_num, "tee_club", selected_club)
+    backup_active_round()
+
     st.markdown("<div class='big-label' style='font-size:34px;'>LOCATION:</div>", unsafe_allow_html=True)
-    html_parts = ["<div class='tee-html-grid'>"]
-    for location in TEE_LOCATIONS:
-        html_parts.append("<div>")
-        html_parts.append(f"<div class='tee-col-title'>{location}</div>")
-        for quality in quality_options:
-            selected_class = "selected" if entry["tee_location"] == location and entry["tee_quality"] == quality else ""
-            color = tee_cell_color(par, location, quality)
-            payload = quote(f"{hole_num}||{location}||{quality}")
-            html_parts.append(f"<a class='tee-tile {selected_class}' style='background:{color};' href='?tee_choice={payload}'>{quality}</a>")
-        html_parts.append("</div>")
-    html_parts.append("</div>")
-    st.markdown("".join(html_parts), unsafe_allow_html=True)
-    st.markdown(f"<div class='tee-selected-note'>SELECTED: {entry['tee_location']} / {entry['tee_quality']}</div>", unsafe_allow_html=True)
+
+    cols = st.columns(len(TEE_LOCATIONS))
+    for col, location in zip(cols, TEE_LOCATIONS):
+        with col:
+            st.markdown(f"<div class='tee-col-title'>{location}</div>", unsafe_allow_html=True)
+            for quality in quality_options:
+                color = tee_cell_color(par, location, quality)
+                selected_class = " selected" if entry["tee_location"] == location and entry["tee_quality"] == quality else ""
+                st.markdown(
+                    f"<div class='native-tee-box{selected_class}' style='background:{color};'>{quality}</div>",
+                    unsafe_allow_html=True,
+                )
+                if st.button("SELECT", key=f"tee_btn_{hole_num}_{location}_{quality}"):
+                    set_value(hole_num, "tee_location", location)
+                    set_value(hole_num, "tee_quality", quality)
+                    backup_active_round()
+                    st.rerun()
+
+    st.markdown(
+        f"<div class='tee-selected-note'>SELECTED: {entry['tee_location']} / {entry['tee_quality']}</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_main_stat_tiles(hole_num, entry):
-    html_parts = ["<div class='main-tile-grid'>"]
-    for stat_name in ["SCORE", "PUTTS"]:
-        image_b64 = local_image_base64(MAIN_IMAGES.get(stat_name, ""))
-        value = int(entry["score"]) if stat_name == "SCORE" else int(entry["putts"])
-        minus_payload = quote(f"{hole_num}||main||{stat_name}||minus")
-        plus_payload = quote(f"{hole_num}||main||{stat_name}||plus")
-        img_html = f"<img class='stat-img' src='data:image/png;base64,{image_b64}'>" if image_b64 else f"<div class='stat-img' style='background:#333;color:white;display:flex;align-items:center;justify-content:center;font-weight:900;'>{stat_name}</div>"
-        html_parts.append(f"<div class='stat-card'>{img_html}<div class='stat-value'>{value}</div><div class='stat-controls'><a class='stat-btn minus' href='?stat_change={minus_payload}'>−</a><a class='stat-btn' href='?stat_change={plus_payload}'>+</a></div></div>")
-    html_parts.append("</div>")
-    st.markdown("".join(html_parts), unsafe_allow_html=True)
+    cols = st.columns(2)
+    for col, stat_name in zip(cols, ["SCORE", "PUTTS"]):
+        with col:
+            image_b64 = local_image_base64(MAIN_IMAGES.get(stat_name, ""))
+            value = int(entry["score"]) if stat_name == "SCORE" else int(entry["putts"])
+            img_html = (
+                f"<div class='native-img-wrap'><img src='data:image/png;base64,{image_b64}'></div>"
+                if image_b64
+                else f"<div class='native-img-fallback'>{stat_name}</div>"
+            )
+            st.markdown(
+                f"<div class='native-card'>{img_html}<div class='native-card-value'>{value}</div></div>",
+                unsafe_allow_html=True,
+            )
+            minus_col, plus_col = st.columns(2)
+            with minus_col:
+                if st.button("−", key=f"{stat_name.lower()}_minus_{hole_num}"):
+                    if stat_name == "SCORE":
+                        set_value(hole_num, "score", max(1, int(st.session_state.round_entries[hole_num]["score"]) - 1))
+                    else:
+                        set_value(hole_num, "putts", max(0, int(st.session_state.round_entries[hole_num]["putts"]) - 1))
+                    backup_active_round()
+                    st.rerun()
+            with plus_col:
+                if st.button("+", key=f"{stat_name.lower()}_plus_{hole_num}"):
+                    if stat_name == "SCORE":
+                        set_value(hole_num, "score", int(st.session_state.round_entries[hole_num]["score"]) + 1)
+                    else:
+                        set_value(hole_num, "putts", int(st.session_state.round_entries[hole_num]["putts"]) + 1)
+                    backup_active_round()
+                    st.rerun()
 
 
 def render_image_stat_grid(title, items, images, group, hole_num, entry):
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown(f"<div class='section-title'>{title}</div>", unsafe_allow_html=True)
-    html_parts = ["<div class='tile-grid'>"]
-    for item in items:
-        image_b64 = local_image_base64(images.get(item, ""))
-        minus_payload = quote(f"{hole_num}||{group}||{item}||minus")
-        plus_payload = quote(f"{hole_num}||{group}||{item}||plus")
-        value = int(entry[group][item])
-        img_html = f"<img class='stat-img' src='data:image/png;base64,{image_b64}'>" if image_b64 else f"<div class='stat-img' style='background:#333;color:white;display:flex;align-items:center;justify-content:center;font-weight:900;'>{item}</div>"
-        html_parts.append(f"<div class='stat-card'>{img_html}<div class='stat-value'>{value}</div><div class='stat-controls'><a class='stat-btn minus' href='?stat_change={minus_payload}'>−</a><a class='stat-btn' href='?stat_change={plus_payload}'>+</a></div></div>")
-    html_parts.append("</div>")
-    st.markdown("".join(html_parts), unsafe_allow_html=True)
+
+    cols = st.columns(len(items))
+    for col, item in zip(cols, items):
+        with col:
+            image_b64 = local_image_base64(images.get(item, ""))
+            value = int(entry[group][item])
+            img_html = (
+                f"<div class='native-img-wrap'><img src='data:image/png;base64,{image_b64}'></div>"
+                if image_b64
+                else f"<div class='native-img-fallback'>{item}</div>"
+            )
+            st.markdown(
+                f"<div class='native-card'>{img_html}<div class='native-card-title'>{item}</div><div class='native-card-value'>{value}</div></div>",
+                unsafe_allow_html=True,
+            )
+            minus_col, plus_col = st.columns(2)
+            with minus_col:
+                if st.button("−", key=f"{group}_{item}_minus_{hole_num}"):
+                    current = int(st.session_state.round_entries[hole_num][group][item])
+                    set_nested_value(hole_num, group, item, max(0, current - 1))
+                    backup_active_round()
+                    st.rerun()
+            with plus_col:
+                if st.button("+", key=f"{group}_{item}_plus_{hole_num}"):
+                    current = int(st.session_state.round_entries[hole_num][group][item])
+                    set_nested_value(hole_num, group, item, current + 1)
+                    backup_active_round()
+                    st.rerun()
 
 
 # If a mobile/browser tap causes a full reload, restore the active round before routing.
 if "screen" not in st.session_state:
     st.session_state.screen = "home"
 
-query_controls = {"stat_change", "tee_choice", "hole_nav"}
+query_controls = {"stat_change", "tee_choice", "hole_nav"}  # legacy support only
 if any(key in st.query_params for key in query_controls):
     if "round_entries" not in st.session_state or "hole_data" not in st.session_state:
         restore_active_round()
@@ -779,6 +909,7 @@ elif st.session_state.screen == "scorecard":
     st.markdown("<div class='big-label' style='font-size:30px;'>INSIDE 100 YARDS IN 3 SHOTS?</div>", unsafe_allow_html=True)
     inside_answer = st.radio("INSIDE 100", ["YES", "NO"], index=0 if entry["inside_100_in_3"] == "YES" else 1, horizontal=True, key=f"inside_100_{hole_num}", label_visibility="collapsed")
     set_value(hole_num, "inside_100_in_3", inside_answer)
+    backup_active_round()
     render_image_stat_grid("GASHES", GASHES, GASH_IMAGES, "gashes", hole_num, entry)
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     bottom1, bottom2 = st.columns(2)
