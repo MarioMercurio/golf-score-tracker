@@ -53,6 +53,37 @@ def inject_scroll_restore():
 
 inject_scroll_restore()
 
+
+
+def scroll_to_scorecard_anchor():
+    anchor = st.session_state.get("scorecard_anchor", "")
+    if not anchor:
+        return
+    components.html(
+        f"""
+        <script>
+        (function() {{
+            const anchorId = {anchor!r};
+            function doScroll() {{
+                const doc = window.parent.document;
+                const el = doc.getElementById(anchorId);
+                if (el) {{
+                    el.scrollIntoView({{behavior: "auto", block: "start"}});
+                    window.parent.scrollBy(0, -8);
+                }}
+            }}
+            setTimeout(doScroll, 50);
+            setTimeout(doScroll, 150);
+            setTimeout(doScroll, 300);
+            setTimeout(doScroll, 600);
+        }})();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+    st.session_state.scorecard_anchor = ""
+
 VIDEO_FILE = "GolfIntro.mp4"
 API_BASE_URL = "https://api.golfcourseapi.com"
 ROUNDS_FILE = Path("rounds.json")
@@ -593,6 +624,7 @@ def process_query_params(hole_num):
                 st.session_state.current_hole_index = max(0, current_index - 1)
             elif decoded == "next":
                 st.session_state.current_hole_index = min(len(hole_data) - 1, current_index + 1)
+            st.session_state.scorecard_anchor = "hole_top_anchor"
             backup_active_round()
             st.query_params.clear()
             st.rerun()
@@ -608,6 +640,7 @@ def process_query_params(hole_num):
             if selected_hole == hole_num:
                 set_value(hole_num, "tee_location", location)
                 set_value(hole_num, "tee_quality", quality)
+                st.session_state.scorecard_anchor = "tee_shot_anchor"
             backup_active_round()
             st.query_params.clear()
             st.rerun()
@@ -621,6 +654,12 @@ def process_query_params(hole_num):
             selected_hole, group, key, direction = decoded.split("||")
             selected_hole = int(selected_hole)
             if selected_hole == hole_num:
+                if group == "main":
+                    st.session_state.scorecard_anchor = "main_stats_anchor"
+                elif group == "hazards":
+                    st.session_state.scorecard_anchor = "hazards_anchor"
+                elif group == "gashes":
+                    st.session_state.scorecard_anchor = "gashes_anchor"
                 if group == "main":
                     if key == "SCORE":
                         current = int(st.session_state.round_entries[hole_num]["score"])
@@ -640,6 +679,7 @@ def process_query_params(hole_num):
 
 
 def render_compact_hole_header(hole_num, entry):
+    st.markdown("<div id='hole_top_anchor'></div>", unsafe_allow_html=True)
     st.markdown(f"""
         <div class="hole-nav-row">
             <a class="hole-nav-btn" href="?hole_nav={quote('prev')}" target="_self">◀</a>
@@ -658,6 +698,7 @@ def render_compact_hole_header(hole_num, entry):
 
 
 def render_tee_shot_grid(hole_num, entry):
+    st.markdown("<div id='tee_shot_anchor'></div>", unsafe_allow_html=True)
     par = int(entry["par"])
     quality_options = get_tee_quality_options(par)
     if entry["tee_quality"] not in quality_options:
@@ -685,6 +726,7 @@ def render_tee_shot_grid(hole_num, entry):
 
 
 def render_main_stat_tiles(hole_num, entry):
+    st.markdown("<div id='main_stats_anchor'></div>", unsafe_allow_html=True)
     html_parts = ["<div class='main-tile-grid'>"]
     for stat_name in ["SCORE", "PUTTS"]:
         image_b64 = local_image_base64(MAIN_IMAGES.get(stat_name, ""))
@@ -698,6 +740,8 @@ def render_main_stat_tiles(hole_num, entry):
 
 
 def render_image_stat_grid(title, items, images, group, hole_num, entry):
+    anchor_id = "hazards_anchor" if group == "hazards" else "gashes_anchor" if group == "gashes" else f"{group}_anchor"
+    st.markdown(f"<div id='{anchor_id}'></div>", unsafe_allow_html=True)
     st.markdown("<div class='white-line'></div>", unsafe_allow_html=True)
     st.markdown(f"<div class='section-title'>{title}</div>", unsafe_allow_html=True)
     html_parts = ["<div class='tile-grid'>"]
