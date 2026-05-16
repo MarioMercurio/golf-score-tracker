@@ -7,8 +7,51 @@ from urllib.parse import quote, unquote
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="GOLF", page_icon="⛳", layout="wide", initial_sidebar_state="collapsed")
+
+
+
+def inject_scroll_restore():
+    components.html(
+        """
+        <script>
+        (function() {
+            const parentWindow = window.parent;
+            const key = "golf_scorecard_scroll_y";
+
+            function restoreScroll() {
+                const saved = parentWindow.sessionStorage.getItem(key);
+                if (saved !== null) {
+                    const y = parseInt(saved, 10);
+                    if (!isNaN(y)) {
+                        parentWindow.scrollTo(0, y);
+                    }
+                }
+            }
+
+            restoreScroll();
+            setTimeout(restoreScroll, 75);
+            setTimeout(restoreScroll, 175);
+            setTimeout(restoreScroll, 350);
+
+            parentWindow.document.addEventListener("click", function() {
+                parentWindow.sessionStorage.setItem(key, parentWindow.scrollY || parentWindow.pageYOffset || 0);
+            }, true);
+
+            parentWindow.addEventListener("beforeunload", function() {
+                parentWindow.sessionStorage.setItem(key, parentWindow.scrollY || parentWindow.pageYOffset || 0);
+            });
+        })();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
+inject_scroll_restore()
 
 VIDEO_FILE = "GolfIntro.mp4"
 API_BASE_URL = "https://api.golfcourseapi.com"
@@ -634,7 +677,7 @@ def render_tee_shot_grid(hole_num, entry):
             selected_class = "selected" if entry["tee_location"] == location and entry["tee_quality"] == quality else ""
             color = tee_cell_color(par, location, quality)
             payload = quote(f"{hole_num}||{location}||{quality}")
-            html_parts.append(f"<a class='tee-tile {selected_class}' style='background:{color};' href='?tee_choice={payload}' target='_self'>{quality}</a>")
+            html_parts.append(f"<a class='tee-tile {selected_class}' style='background:{color};' href='?tee_choice={payload}' target='_self' onclick='sessionStorage.setItem(`golf_scorecard_scroll_y`, window.scrollY || window.pageYOffset || 0);'>{quality}</a>")
         html_parts.append("</div>")
     html_parts.append("</div>")
     st.markdown("".join(html_parts), unsafe_allow_html=True)
@@ -649,7 +692,7 @@ def render_main_stat_tiles(hole_num, entry):
         minus_payload = quote(f"{hole_num}||main||{stat_name}||minus")
         plus_payload = quote(f"{hole_num}||main||{stat_name}||plus")
         img_html = f"<img class='stat-img' src='data:image/png;base64,{image_b64}'>" if image_b64 else f"<div class='stat-img' style='background:#333;color:white;display:flex;align-items:center;justify-content:center;font-weight:900;'>{stat_name}</div>"
-        html_parts.append(f"<div class='stat-card'>{img_html}<div class='stat-value'>{value}</div><div class='stat-controls'><a class='stat-btn minus' href='?stat_change={minus_payload}' target='_self'>−</a><a class='stat-btn' href='?stat_change={plus_payload}' target='_self'>+</a></div></div>")
+        html_parts.append(f"<div class='stat-card'>{img_html}<div class='stat-value'>{value}</div><div class='stat-controls'><a class='stat-btn minus' href='?stat_change={minus_payload}' target='_self' onclick='sessionStorage.setItem(`golf_scorecard_scroll_y`, window.scrollY || window.pageYOffset || 0);'>−</a><a class='stat-btn' href='?stat_change={plus_payload}' target='_self' onclick='sessionStorage.setItem(`golf_scorecard_scroll_y`, window.scrollY || window.pageYOffset || 0);'>+</a></div></div>")
     html_parts.append("</div>")
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
@@ -664,7 +707,7 @@ def render_image_stat_grid(title, items, images, group, hole_num, entry):
         plus_payload = quote(f"{hole_num}||{group}||{item}||plus")
         value = int(entry[group][item])
         img_html = f"<img class='stat-img' src='data:image/png;base64,{image_b64}'>" if image_b64 else f"<div class='stat-img' style='background:#333;color:white;display:flex;align-items:center;justify-content:center;font-weight:900;'>{item}</div>"
-        html_parts.append(f"<div class='stat-card'>{img_html}<div class='stat-value'>{value}</div><div class='stat-controls'><a class='stat-btn minus' href='?stat_change={minus_payload}' target='_self'>−</a><a class='stat-btn' href='?stat_change={plus_payload}' target='_self'>+</a></div></div>")
+        html_parts.append(f"<div class='stat-card'>{img_html}<div class='stat-value'>{value}</div><div class='stat-controls'><a class='stat-btn minus' href='?stat_change={minus_payload}' target='_self' onclick='sessionStorage.setItem(`golf_scorecard_scroll_y`, window.scrollY || window.pageYOffset || 0);'>−</a><a class='stat-btn' href='?stat_change={plus_payload}' target='_self' onclick='sessionStorage.setItem(`golf_scorecard_scroll_y`, window.scrollY || window.pageYOffset || 0);'>+</a></div></div>")
     html_parts.append("</div>")
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
