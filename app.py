@@ -1,6 +1,8 @@
 import base64
-from datetime import date, timedelta
+import json
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 from urllib.parse import quote, unquote
 
 import requests
@@ -10,6 +12,7 @@ st.set_page_config(page_title="GOLF", page_icon="⛳", layout="wide", initial_si
 
 VIDEO_FILE = "GolfIntro.mp4"
 API_BASE_URL = "https://api.golfcourseapi.com"
+ROUNDS_FILE = Path("rounds.json")
 
 MAIN_IMAGES = {
     "SCORE": "Main - Score.png",
@@ -307,6 +310,134 @@ def tee_cell_color(par, location, quality):
             return dark_red
 
     return "#4DDB68"
+
+
+
+def load_saved_rounds():
+    if not ROUNDS_FILE.exists():
+        return []
+
+    try:
+        data = json.loads(ROUNDS_FILE.read_text())
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def write_saved_rounds(rounds):
+    try:
+        ROUNDS_FILE.write_text(json.dumps(rounds, indent=2, default=str))
+        return True
+    except Exception:
+        return False
+
+
+def current_round_payload():
+    entries = st.session_state.get("round_entries", {})
+    hole_entries = []
+
+    for hole_num in sorted(entries.keys()):
+        entry = entries[hole_num]
+        hole_entries.append({
+            "hole": int(entry.get("hole", hole_num)),
+            "par": int(entry.get("par", 0)),
+            "yards": int(entry.get("yards", 0) or 0),
+            "handicap": entry.get("handicap", ""),
+            "score": int(entry.get("score", 0)),
+            "putts": int(entry.get("putts", 0)),
+            "tee_club": entry.get("tee_club", ""),
+            "tee_location": entry.get("tee_location", ""),
+            "tee_quality": entry.get("tee_quality", ""),
+            "inside_100_in_3": entry.get("inside_100_in_3", "NO"),
+            "hazards": entry.get("hazards", {}),
+            "gashes": entry.get("gashes", {}),
+        })
+
+    total_score = sum(hole["score"] for hole in hole_entries)
+    total_par = sum(hole["par"] for hole in hole_entries)
+    total_putts = sum(hole["putts"] for hole in hole_entries)
+
+    round_id = st.session_state.get("round_id")
+    if not round_id:
+        round_id = str(uuid4())
+        st.session_state.round_id = round_id
+
+    round_date = st.session_state.get("round_date", date.today())
+    if hasattr(round_date, "isoformat"):
+        round_date = round_date.isoformat()
+
+    return {
+        "round_id": round_id,
+        "saved_at": datetime.now().isoformat(timespec="seconds"),
+        "round_date": round_date,
+        "course": st.session_state.get("course", ""),
+        "api_course": st.session_state.get("api_course", ""),
+        "tee": st.session_state.get("tee", ""),
+        "holes": len(hole_entries),
+        "total_score": total_score,
+        "total_par": total_par,
+        "relation_to_par": total_score - total_par,
+        "total_putts": total_putts,
+        "entries": hole_entries,
+    }
+
+
+def save_current_round():
+    payload = current_round_payload()
+    rounds = load_saved_rounds()
+    rounds = [round_data for round_data in rounds if round_data.get("round_id") != payload["round_id"]]
+    rounds.append(payload)
+    return write_saved_rounds(rounds)
+
+
+def flatten_saved_rounds(rounds):
+    rows = []
+
+    for round_data in rounds:
+        for entry in round_data.get("entries", []):
+            row = {
+                "round_id": round_data.get("round_id", ""),
+                "round_date": round_data.get("round_date", ""),
+                "course": round_data.get("course", ""),
+                "tee": round_data.get("tee", ""),
+                **entry,
+            }
+            rows.append(row)
+
+    return rows
+
+
+def count_nested(rows, group, key):
+    total = 0
+    for row in rows:
+        values = row.get(group, {})
+        if isinstance(values, dict):
+            total += int(values.get(key, 0) or 0)
+    return total
+
+
+def render_stat_metric(label, value):
+    st.markdown(
+        f"""
+        <div class='stats-metric'>
+            <div class='stats-metric-label'>{label}</div>
+            <div class='stats-metric-value'>{value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def pct(numerator, denominator):
+    if not denominator:
+        return "0%"
+    return f"{round((numerator / denominator) * 100)}%"
+
+
+def relation_text(value):
+    if value == 0:
+        return "E"
+    return f"+{value}" if value > 0 else str(value)
 
 
 st.markdown("""
@@ -629,6 +760,42 @@ div[data-baseweb="select"] > div {
     background: #333333;
 }
 
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin: 18px 0 24px 0;
+}
+
+.stats-metric {
+    background: #1f2028;
+    border: 2px solid #333333;
+    padding: 18px 12px;
+    text-align: center;
+}
+
+.stats-metric-label {
+    color: #AAAAAA;
+    font-size: 16px;
+    font-weight: 900;
+    margin-bottom: 8px;
+}
+
+.stats-metric-value {
+    color: #4DDB68;
+    font-size: 42px;
+    font-weight: 1000;
+    line-height: 1;
+}
+
+.stats-table-title {
+    color: white;
+    font-size: 28px;
+    font-weight: 1000;
+    margin-top: 24px;
+    margin-bottom: 8px;
+}
+
 @media (max-width: 768px) {
     .block-container {
         padding-left: .45rem;
@@ -783,6 +950,23 @@ div[data-baseweb="select"] > div {
     .stat-btn {
         height: 32px;
         font-size: 22px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .stats-metric {
+        padding: 14px 8px;
+    }
+
+    .stats-metric-label {
+        font-size: 12px;
+    }
+
+    .stats-metric-value {
+        font-size: 30px;
     }
 }
 </style>
@@ -1038,6 +1222,10 @@ if st.session_state.screen == "home":
             st.session_state.screen = "start_round"
             st.rerun()
 
+        if st.button("STATS"):
+            st.session_state.screen = "stats"
+            st.rerun()
+
 
 elif st.session_state.screen == "start_round":
     st.markdown("<div class='start-title'>START ROUND</div>", unsafe_allow_html=True)
@@ -1135,6 +1323,7 @@ elif st.session_state.screen == "start_round":
         st.session_state.holes = holes
         st.session_state.hole_data = tee_holes[:holes]
         st.session_state.round_date = round_date
+        st.session_state.round_id = str(uuid4())
 
         init_round_entries()
 
@@ -1241,8 +1430,155 @@ elif st.session_state.screen == "round_summary":
     col1, col2 = st.columns(2)
 
     with col1:
+        if st.button("SAVE ROUND"):
+            if save_current_round():
+                st.success("Round saved.")
+            else:
+                st.error("Round could not be saved.")
+
+    with col2:
+        if st.button("VIEW STATS"):
+            save_current_round()
+            st.session_state.screen = "stats"
+            st.rerun()
+
+    col3, col4 = st.columns(2)
+
+    with col3:
         if st.button("EDIT ROUND"):
             st.session_state.screen = "scorecard"
+            st.rerun()
+
+    with col4:
+        if st.button("HOME"):
+            st.session_state.screen = "home"
+            st.rerun()
+
+
+elif st.session_state.screen == "stats":
+    st.markdown("<div class='start-title'>STATS</div>", unsafe_allow_html=True)
+
+    rounds = load_saved_rounds()
+    rows = flatten_saved_rounds(rounds)
+
+    if not rounds or not rows:
+        st.markdown(
+            """
+            <div class='summary-box'>
+            No saved rounds yet.<br><br>
+            Log a round, finish it, then tap SAVE ROUND or VIEW STATS.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        if st.button("PLAY GOLF"):
+            st.session_state.screen = "start_round"
+            st.rerun()
+
+        if st.button("HOME"):
+            st.session_state.screen = "home"
+            st.rerun()
+
+        st.stop()
+
+    total_holes = len(rows)
+    total_score = sum(int(row.get("score", 0)) for row in rows)
+    total_par = sum(int(row.get("par", 0)) for row in rows)
+    total_putts = sum(int(row.get("putts", 0)) for row in rows)
+    total_relation = total_score - total_par
+
+    avg_score_per_18 = round((total_score / total_holes) * 18, 1) if total_holes else 0
+    avg_to_par_per_18 = round((total_relation / total_holes) * 18, 1) if total_holes else 0
+    avg_putts_per_hole = round(total_putts / total_holes, 2) if total_holes else 0
+    avg_putts_per_18 = round(avg_putts_per_hole * 18, 1) if total_holes else 0
+
+    total_penalties = sum(count_nested(rows, "hazards", hazard) for hazard in HAZARDS)
+    total_gashes = sum(count_nested(rows, "gashes", gash) for gash in GASHES)
+    scoring_zone_yes = sum(1 for row in rows if row.get("inside_100_in_3") == "YES")
+
+    st.markdown("<div class='stats-grid'>", unsafe_allow_html=True)
+    render_stat_metric("ROUNDS", len(rounds))
+    render_stat_metric("HOLES", total_holes)
+    render_stat_metric("AVG SCORE / 18", avg_score_per_18)
+    render_stat_metric("AVG TO PAR / 18", relation_text(avg_to_par_per_18))
+    render_stat_metric("PUTTS / 18", avg_putts_per_18)
+    render_stat_metric("PUTTS / HOLE", avg_putts_per_hole)
+    render_stat_metric("PENALTIES", total_penalties)
+    render_stat_metric("GASHES", total_gashes)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='stats-table-title'>SCORING ZONE</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class='summary-box'>
+        INSIDE 100 IN 3: {scoring_zone_yes} / {total_holes} holes ({pct(scoring_zone_yes, total_holes)})
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<div class='stats-table-title'>TEE SHOT QUALITY</div>", unsafe_allow_html=True)
+    quality_counts = {}
+    for row in rows:
+        key = row.get("tee_quality", "")
+        quality_counts[key] = quality_counts.get(key, 0) + 1
+
+    for quality, count in sorted(quality_counts.items(), key=lambda item: item[1], reverse=True):
+        if quality:
+            st.markdown(
+                f"<div class='summary-box' style='margin-bottom:8px;'>{quality}: {count} ({pct(count, total_holes)})</div>",
+                unsafe_allow_html=True
+            )
+
+    st.markdown("<div class='stats-table-title'>TEE SHOT LOCATION</div>", unsafe_allow_html=True)
+    location_counts = {}
+    for row in rows:
+        key = row.get("tee_location", "")
+        location_counts[key] = location_counts.get(key, 0) + 1
+
+    for location, count in sorted(location_counts.items(), key=lambda item: item[1], reverse=True):
+        if location:
+            st.markdown(
+                f"<div class='summary-box' style='margin-bottom:8px;'>{location}: {count} ({pct(count, total_holes)})</div>",
+                unsafe_allow_html=True
+            )
+
+    st.markdown("<div class='stats-table-title'>PENALTIES / HAZARDS</div>", unsafe_allow_html=True)
+    for hazard in HAZARDS:
+        count = count_nested(rows, "hazards", hazard)
+        st.markdown(
+            f"<div class='summary-box' style='margin-bottom:8px;'>{hazard}: {count}</div>",
+            unsafe_allow_html=True
+        )
+
+    st.markdown("<div class='stats-table-title'>GASHES</div>", unsafe_allow_html=True)
+    for gash in GASHES:
+        count = count_nested(rows, "gashes", gash)
+        st.markdown(
+            f"<div class='summary-box' style='margin-bottom:8px;'>{gash}: {count}</div>",
+            unsafe_allow_html=True
+        )
+
+    st.markdown("<div class='stats-table-title'>SAVED ROUNDS</div>", unsafe_allow_html=True)
+    for round_data in sorted(rounds, key=lambda item: item.get("round_date", ""), reverse=True):
+        rel = relation_text(int(round_data.get("relation_to_par", 0)))
+        st.markdown(
+            f"""
+            <div class='summary-box' style='margin-bottom:10px;'>
+            {round_data.get('round_date', '')}<br>
+            {round_data.get('course', '')}<br>
+            SCORE: {round_data.get('total_score', '')} ({rel}) • PUTTS: {round_data.get('total_putts', '')}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("PLAY GOLF"):
+            st.session_state.screen = "start_round"
             st.rerun()
 
     with col2:
