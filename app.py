@@ -1,4 +1,5 @@
 import base64
+import json
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -14,6 +15,7 @@ st.set_page_config(
 
 VIDEO_FILE = "GolfIntro.mp4"
 API_BASE_URL = "https://api.golfcourseapi.com"
+COURSE_INDEX_FILE = "course_index.json"
 
 US_STATES = {
     "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
@@ -32,11 +34,12 @@ US_STATES = {
     "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
 }
 
-COURSE_SEARCH_SWEEP_TERMS = [
-    "golf", "club", "country club", "course", "links",
-    "national", "municipal", "park", "valley", "lake",
-    "hills", "ridge", "river", "creek", "woods", "meadows",
-    "a", "e", "i", "o", "u", "r", "s", "t", "n", "l"
+COURSE_SWEEP_TERMS = [
+    "", "golf", "club", "country club", "course", "links", "national",
+    "municipal", "park", "valley", "lake", "lakes", "hills", "ridge",
+    "river", "creek", "woods", "meadows", "pointe", "point", "legacy",
+    "green", "greens", "oak", "oaks", "pine", "pines", "blue", "red",
+    "a", "e", "i", "o", "u", "r", "s", "t", "n", "l", "m", "c"
 ]
 
 
@@ -99,10 +102,33 @@ def api_get_course_details(course_id):
         return {}
 
 
+def get_course_id(course):
+    return course.get("id") or course.get("course_id")
+
+
+def get_course_name(course):
+    return (
+        course.get("course_name")
+        or course.get("name")
+        or course.get("club_name")
+        or "Unknown Course"
+    )
+
+
+def get_course_city(course):
+    city = course.get("city", "")
+    location = course.get("location", {})
+
+    if isinstance(location, dict):
+        city = city or location.get("city", "")
+
+    return str(city).strip()
+
+
 def get_course_state(course):
     state = course.get("state", "")
-
     location = course.get("location", {})
+
     if isinstance(location, dict):
         state = state or location.get("state", "")
 
@@ -110,20 +136,9 @@ def get_course_state(course):
 
 
 def get_course_display_name(course):
-    name = (
-        course.get("course_name")
-        or course.get("name")
-        or course.get("club_name")
-        or "Unknown Course"
-    )
-
-    city = course.get("city", "")
-    state = course.get("state", "")
-
-    location = course.get("location", {})
-    if isinstance(location, dict):
-        city = city or location.get("city", "")
-        state = state or location.get("state", "")
+    name = get_course_name(course)
+    city = get_course_city(course)
+    state = get_course_state(course)
 
     if city and state:
         return f"{name} — {city}, {state}"
@@ -134,34 +149,101 @@ def get_course_display_name(course):
     return name
 
 
-def get_course_id(course):
-    return course.get("id") or course.get("course_id")
+def normalize_course(course):
+    return {
+        "id": get_course_id(course),
+        "name": get_course_name(course),
+        "city": get_course_city(course),
+        "state": get_course_state(course),
+        "raw": course
+    }
+
+
+def load_course_index():
+    path = Path(COURSE_INDEX_FILE)
+
+    if not path.exists():
+        return []
+
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return []
+
+
+def save_course_index(index):
+    path = Path(COURSE_INDEX_FILE)
+    path.write_text(json.dumps(index, indent=2))
+
+
+def merge_courses(existing_index, new_courses):
+    merged = {}
+
+    for course in existing_index:
+        course_id = course.get("id")
+        if course_id:
+            merged[str(course_id)] = course
+
+    for course in new_courses:
+        normalized = normalize_course(course)
+        course_id = normalized.get("id")
+
+        if course_id:
+            merged[str(course_id)] = normalized
+
+    return list(merged.values())
 
 
 @st.cache_data(show_spinner=False)
-def get_courses_for_state(state_name, state_abbrev):
-    deduped = {}
+def discover_courses_for_state(state_name, state_abbrev):
+    discovered = []
 
-    search_terms = [state_name, state_abbrev] + COURSE_SEARCH_SWEEP_TERMS
+    search_terms = [state_name, state_abbrev] + COURSE_SWEEP_TERMS
 
     for term in search_terms:
         results = api_search_courses(term)
 
         for course in results:
-            course_id = get_course_id(course)
-
-            if not course_id:
-                continue
-
             course_state = get_course_state(course)
 
-            if course_state == state_abbrev.upper():
-                deduped[course_id] = course
+            if course_state == state_abbrev:
+                discovered.append(course)
+
+    normalized = {}
+
+    for course in discovered:
+        course_id = get_course_id(course)
+
+        if course_id:
+            normalized[str(course_id)] = normalize_course(course)
 
     return sorted(
-        list(deduped.values()),
-        key=lambda c: get_course_display_name(c).lower()
+        list(normalized.values()),
+        key=lambda c: (c.get("name", "").lower(), c.get("city", "").lower())
     )
+
+
+def get_indexed_courses_for_state(state_abbrev):
+    index = load_course_index()
+
+    return sorted(
+        [c for c in index if c.get("state") == state_abbrev],
+        key=lambda c: (c.get("name", "").lower(), c.get("city", "").lower())
+    )
+
+
+def course_label_from_index(course):
+    name = course.get("name", "Unknown Course")
+    city = course.get("city", "")
+    state = course.get("state", "")
+
+    if city and state:
+        return f"{name} — {city}, {state}"
+
+    if state:
+        return f"{name} — {state}"
+
+    return name
 
 
 def get_tee_options(course_details):
@@ -185,19 +267,19 @@ def get_tee_options(course_details):
             rating = tee.get("course_rating", "")
             slope = tee.get("slope_rating", "")
 
-            label_parts = [tee_name]
+            parts = [tee_name]
 
             if total_yards:
-                label_parts.append(f"{total_yards} YDS")
+                parts.append(f"{total_yards} YDS")
             if rating:
-                label_parts.append(f"Rating {rating}")
+                parts.append(f"Rating {rating}")
             if slope:
-                label_parts.append(f"Slope {slope}")
+                parts.append(f"Slope {slope}")
 
-            label_parts.append(gender.title())
+            parts.append(gender.title())
 
             tee_options.append({
-                "label": " • ".join(label_parts),
+                "label": " • ".join(parts),
                 "tee": tee
             })
 
@@ -443,21 +525,32 @@ elif st.session_state.screen == "start_round":
     st.markdown(
         """
         <div class='api-note'>
-        Select a state, then choose a course from the course list.
+        Courses are saved into a local course index, then filtered by state.
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    with st.spinner("Loading courses..."):
-        state_courses = get_courses_for_state(selected_state, selected_state_abbrev)
+    existing_state_courses = get_indexed_courses_for_state(selected_state_abbrev)
+
+    if st.button("UPDATE COURSE INDEX"):
+        with st.spinner("Searching API and updating local course index..."):
+            discovered = discover_courses_for_state(selected_state, selected_state_abbrev)
+            current_index = load_course_index()
+            updated_index = merge_courses(current_index, [c["raw"] for c in discovered])
+            save_course_index(updated_index)
+
+        st.success(f"Course index updated. Found {len(discovered)} courses for {selected_state}.")
+        st.rerun()
+
+    state_courses = get_indexed_courses_for_state(selected_state_abbrev)
 
     if not state_courses:
-        st.warning("No courses were returned for this state by the Golf Course API.")
+        st.warning("No courses saved for this state yet. Tap UPDATE COURSE INDEX.")
         st.stop()
 
     course_options = {
-        get_course_display_name(course): course
+        course_label_from_index(course): course
         for course in state_courses
     }
 
@@ -467,7 +560,7 @@ elif st.session_state.screen == "start_round":
     )
 
     selected_course = course_options[selected_course_label]
-    course_id = get_course_id(selected_course)
+    course_id = selected_course.get("id")
 
     if not course_id:
         st.warning("This course does not include a usable course ID.")
