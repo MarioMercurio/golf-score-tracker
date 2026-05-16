@@ -1,5 +1,5 @@
 import base64
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -78,20 +78,16 @@ def get_api_key():
 
 def local_image_base64(filename):
     path = Path(filename)
-
     if not path.exists():
         path = Path("assets") / filename
-
     if not path.exists():
         return ""
-
     return base64.b64encode(path.read_bytes()).decode()
 
 
 @st.cache_data(show_spinner=False)
 def api_search_courses(search_query):
     api_key = get_api_key()
-
     if not api_key:
         return []
 
@@ -116,7 +112,6 @@ def api_search_courses(search_query):
 @st.cache_data(show_spinner=False)
 def api_get_course_details(course_id):
     api_key = get_api_key()
-
     if not api_key:
         return {}
 
@@ -477,6 +472,50 @@ div[data-baseweb="select"] > div {
     font-size: 22px !important;
 }
 
+.start-round-select div[data-baseweb="select"] > div,
+.stSelectbox div[data-baseweb="select"] > div {
+    background-color: #242533 !important;
+    color: white !important;
+    min-height: 74px !important;
+    border-radius: 14px !important;
+    font-size: 26px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.stSelectbox span {
+    font-size: 26px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.stTextInput div[data-baseweb="input"] {
+    background-color: #242533 !important;
+    border-radius: 14px !important;
+    min-height: 76px !important;
+    height: 76px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.stTextInput input {
+    background-color: transparent !important;
+    color: white !important;
+    font-size: 26px !important;
+    min-height: 76px !important;
+    height: 76px !important;
+    line-height: normal !important;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    padding-left: 24px !important;
+    padding-right: 16px !important;
+}
+
+.stTextInput input::placeholder {
+    font-size: 26px !important;
+    opacity: 0.7 !important;
+}
+
 .tee-grid-caption {
     color: #AAAAAA;
     text-align: center;
@@ -603,6 +642,33 @@ div[data-baseweb="select"] > div {
         margin-bottom: 24px;
     }
 
+    .stSelectbox div[data-baseweb="select"] > div {
+        min-height: 66px !important;
+        height: 66px !important;
+        font-size: 22px !important;
+    }
+
+    .stSelectbox span {
+        font-size: 22px !important;
+    }
+
+    .stTextInput div[data-baseweb="input"] {
+        min-height: 76px !important;
+        height: 76px !important;
+    }
+
+    .stTextInput input {
+        font-size: 22px !important;
+        min-height: 76px !important;
+        height: 76px !important;
+        padding-left: 24px !important;
+        padding-right: 16px !important;
+    }
+
+    .stTextInput input::placeholder {
+        font-size: 22px !important;
+    }
+
     .hole-nav-row {
         grid-template-columns: 46px 1fr 46px;
         gap: 6px;
@@ -717,11 +783,6 @@ div[data-baseweb="select"] > div {
     .stat-btn {
         height: 32px;
         font-size: 22px;
-    }
-
-    div[data-baseweb="select"] > div {
-        min-height: 52px !important;
-        font-size: 20px !important;
     }
 }
 </style>
@@ -981,7 +1042,12 @@ if st.session_state.screen == "home":
 elif st.session_state.screen == "start_round":
     st.markdown("<div class='start-title'>START ROUND</div>", unsafe_allow_html=True)
 
-    round_date = st.date_input("DATE", value=date.today())
+    today = date.today()
+    upcoming_dates = [today + timedelta(days=i) for i in range(365)]
+    formatted_dates = [d.strftime("%A, %B %d, %Y") for d in upcoming_dates]
+
+    selected_date_label = st.selectbox("DATE", formatted_dates, index=0)
+    round_date = upcoming_dates[formatted_dates.index(selected_date_label)]
 
     selected_state_name = st.selectbox(
         "STATE",
@@ -997,17 +1063,11 @@ elif st.session_state.screen == "start_round":
         placeholder="Type course name..."
     )
 
-    st.markdown(
-        "<div class='api-note'>Course search, tee boxes and hole yardages are powered by the Golf Course API.</div>",
-        unsafe_allow_html=True
-    )
-
     if not get_api_key():
         st.error("Missing Golf API key. Add GOLF_API_KEY to Streamlit secrets.")
         st.stop()
 
     if not search_query.strip():
-        st.info("Type a course name to search.")
         st.stop()
 
     api_matches = api_search_courses(search_query.strip())
