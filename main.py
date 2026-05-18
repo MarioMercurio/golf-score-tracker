@@ -164,6 +164,9 @@ MAIN_IMAGES = {
     'PUTTS': 'Main - Putts.png',
 }
 
+FAIRWAY_HIT_ICON = 'Fairway Hit.png'
+INSIDE_100_ICON = 'Inside 100.png'
+
 PENALTY_IMAGES = {
     'OB': 'Penalty - OB.png',
     'GREEN BUNKER': 'Penalty - Green Bunker .png',
@@ -5833,6 +5836,96 @@ button, .q-btn {
     box-sizing: border-box !important;
 }
 
+
+/* FOUR TILE FAIRWAY / SCORING ZONE LAYOUT */
+.fairway-zone-four-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr !important;
+    gap: 0 !important;
+    width: 100% !important;
+    margin-top: 18px !important;
+    margin-bottom: 22px !important;
+    background: #000000 !important;
+    overflow: hidden !important;
+}
+
+.fairway-zone-icon {
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+    background: #000000 !important;
+}
+
+.fairway-zone-choice-stack {
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    display: grid !important;
+    grid-template-rows: 1fr 1fr !important;
+    gap: 8px !important;
+    background: #1f2028 !important;
+    padding: 8px !important;
+    box-sizing: border-box !important;
+}
+
+.fairway-zone-choice-btn {
+    border-radius: 0 !important;
+    color: #ffffff !important;
+    font-size: clamp(20px, 5.5vw, 36px) !important;
+    font-weight: 1000 !important;
+    box-shadow: none !important;
+    border: 5px solid transparent !important;
+    box-sizing: border-box !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.fairway-zone-choice-btn .q-btn__content {
+    color: #ffffff !important;
+    font-size: clamp(20px, 5.5vw, 36px) !important;
+    font-weight: 1000 !important;
+    line-height: 1 !important;
+}
+
+.fairway-zone-choice-yes {
+    background: #4CAF50 !important;
+    background-color: #4CAF50 !important;
+}
+
+.fairway-zone-choice-no {
+    background: #F44336 !important;
+    background-color: #F44336 !important;
+}
+
+.fairway-zone-choice-inactive {
+    filter: brightness(.42) !important;
+}
+
+.fairway-zone-choice-selected {
+    border: 5px solid #ffffff !important;
+    box-shadow: inset 0 0 0 2px #ffffff !important;
+    filter: none !important;
+}
+
+@media (max-width: 430px) {
+    .fairway-zone-four-grid {
+        margin-top: 14px !important;
+        margin-bottom: 18px !important;
+    }
+
+    .fairway-zone-choice-stack {
+        gap: 6px !important;
+        padding: 6px !important;
+    }
+
+    .fairway-zone-choice-btn {
+        border-width: 4px !important;
+    }
+}
+
 </style>
 '''
 
@@ -6117,78 +6210,57 @@ def render_direct_fir_gir(entry):
     par = safe_int(entry.get('par'), 0)
 
     if par == 3:
-        title = 'GREEN HIT?'
         field = 'green_hit'
     else:
-        title = 'FAIRWAY HIT?'
         field = 'fairway_hit'
 
     current_value = entry.get(field, 'NO') or 'NO'
-
-    fairway_yes_selected = current_value == 'YES'
-    fairway_no_selected = current_value == 'NO'
-
-    fairway_yes_class = 'direct-fir-gir-btn direct-fir-gir-yes'
-    fairway_no_class = 'direct-fir-gir-btn direct-fir-gir-no'
-
-    if fairway_yes_selected:
-        fairway_yes_class += ' direct-fir-gir-selected'
-    else:
-        fairway_yes_class += ' direct-fir-gir-inactive'
-
-    if fairway_no_selected:
-        fairway_no_class += ' direct-fir-gir-selected'
-    else:
-        fairway_no_class += ' direct-fir-gir-inactive'
-
-    fairway_yes_style = (
-        'background:#4CAF50 !important; background-color:#4CAF50 !important; color:white !important; '
-        + ('border:5px solid #ffffff !important; box-shadow: inset 0 0 0 2px #ffffff !important; filter:none !important;' if fairway_yes_selected else 'border:5px solid transparent !important;')
-    )
-    fairway_no_style = (
-        'background:#F44336 !important; background-color:#F44336 !important; color:white !important; '
-        + ('border:5px solid #ffffff !important; box-shadow: inset 0 0 0 2px #ffffff !important; filter:none !important;' if fairway_no_selected else 'border:5px solid transparent !important;')
-    )
-
-    with ui.element('div').classes('direct-fir-gir-wrap'):
-        ui.html('<div class="direct-fir-gir-title">' + title + '</div>')
-        with ui.element('div').classes('direct-fir-gir-buttons'):
-            ui.button('YES', on_click=lambda: set_direct_fir_gir(field, 'YES')).classes(fairway_yes_class).style(fairway_yes_style)
-            ui.button('NO', on_click=lambda: set_direct_fir_gir(field, 'NO')).classes(fairway_no_class).style(fairway_no_style)
-
-    zone_question = scoring_zone_question_for_entry(entry)
     zone_value = entry.get('inside_100_in_3', 'NO') or 'NO'
 
-    zone_yes_selected = zone_value == 'YES'
-    zone_no_selected = zone_value == 'NO'
+    fairway_yes_class = 'fairway-zone-choice-btn fairway-zone-choice-yes'
+    fairway_no_class = 'fairway-zone-choice-btn fairway-zone-choice-no'
+    zone_yes_class = 'fairway-zone-choice-btn fairway-zone-choice-yes'
+    zone_no_class = 'fairway-zone-choice-btn fairway-zone-choice-no'
 
-    zone_yes_class = 'direct-fir-gir-btn direct-fir-gir-yes'
-    zone_no_class = 'direct-fir-gir-btn direct-fir-gir-no'
-
-    if zone_yes_selected:
-        zone_yes_class += ' direct-fir-gir-selected'
+    if current_value == 'YES':
+        fairway_yes_class += ' fairway-zone-choice-selected'
+        fairway_no_class += ' fairway-zone-choice-inactive'
     else:
-        zone_yes_class += ' direct-fir-gir-inactive'
+        fairway_no_class += ' fairway-zone-choice-selected'
+        fairway_yes_class += ' fairway-zone-choice-inactive'
 
-    if zone_no_selected:
-        zone_no_class += ' direct-fir-gir-selected'
+    if zone_value == 'YES':
+        zone_yes_class += ' fairway-zone-choice-selected'
+        zone_no_class += ' fairway-zone-choice-inactive'
     else:
-        zone_no_class += ' direct-fir-gir-inactive'
+        zone_no_class += ' fairway-zone-choice-selected'
+        zone_yes_class += ' fairway-zone-choice-inactive'
 
-    zone_yes_style = (
-        'background:#4CAF50 !important; background-color:#4CAF50 !important; color:white !important; '
-        + ('border:5px solid #ffffff !important; box-shadow: inset 0 0 0 2px #ffffff !important; filter:none !important;' if zone_yes_selected else 'border:5px solid transparent !important;')
-    )
-    zone_no_style = (
-        'background:#F44336 !important; background-color:#F44336 !important; color:white !important; '
-        + ('border:5px solid #ffffff !important; box-shadow: inset 0 0 0 2px #ffffff !important; filter:none !important;' if zone_no_selected else 'border:5px solid transparent !important;')
-    )
+    with ui.element('div').classes('fairway-zone-four-grid'):
 
-    with ui.element('div').classes('direct-fir-gir-wrap scoring-zone-inline-wrap'):
-        ui.html('<div class="direct-fir-gir-title scoring-zone-inline-title">' + zone_question + '</div>')
-        with ui.element('div').classes('direct-fir-gir-buttons'):
-            ui.button('YES', on_click=lambda: set_inside('YES')).classes(zone_yes_class).style(zone_yes_style)
-            ui.button('NO', on_click=lambda: set_inside('NO')).classes(zone_no_class).style(zone_no_style)
+        ui.html(image_html(
+            FAIRWAY_HIT_ICON,
+            'FAIRWAY HIT',
+            'fairway-zone-icon',
+            'fake-image fairway-zone-icon',
+            '#4CAF50'
+        ))
+
+        with ui.element('div').classes('fairway-zone-choice-stack'):
+            ui.button('YES', on_click=lambda: set_direct_fir_gir(field, 'YES')).classes(fairway_yes_class)
+            ui.button('NO', on_click=lambda: set_direct_fir_gir(field, 'NO')).classes(fairway_no_class)
+
+        ui.html(image_html(
+            INSIDE_100_ICON,
+            'INSIDE 100',
+            'fairway-zone-icon',
+            'fake-image fairway-zone-icon',
+            '#4CAF50'
+        ))
+
+        with ui.element('div').classes('fairway-zone-choice-stack'):
+            ui.button('YES', on_click=lambda: set_inside('YES')).classes(zone_yes_class)
+            ui.button('NO', on_click=lambda: set_inside('NO')).classes(zone_no_class)
 
 
 
