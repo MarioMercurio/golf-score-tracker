@@ -5144,6 +5144,695 @@ button, .q-btn {
     box-shadow: none !important;
 }
 
+
+/* PLAY GOLF NAV FINAL FIX */
+.scorecard-screen-tight .hole-nav .q-btn,
+.scorecard-screen-tight .hole-nav .q-btn.nav-btn,
+.scorecard-screen-tight .hole-nav button,
+.scorecard-screen-tight .nav-btn,
+.scorecard-screen-tight .bottom-nav-arrow,
+.scorecard-screen-tight .bottom-nav-arrow.q-btn,
+.scorecard-screen-tight .bottom-nav-arrow button {
+    background: #1f2028 !important;
+    background-color: #1f2028 !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.scorecard-screen-tight .hole-nav .q-btn::before,
+.scorecard-screen-tight .nav-btn::before,
+.scorecard-screen-tight .bottom-nav-arrow::before {
+    background: #1f2028 !important;
+    opacity: 1 !important;
+}
+
+.scorecard-screen-tight .hole-card {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 76px !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+}
+
+.scorecard-screen-tight .meta-grid {
+    width: 100% !important;
+    transform: translateY(4px) !important;
+}
+
+.scorecard-screen-tight .meta-box {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+
+/* PLAY GOLF SCORE / PUTTS DIRECT ENTRY - MOBILE COMPACT */
+.scorecard-screen-tight .main-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 14px !important;
+    width: 100% !important;
+    margin-top: 12px !important;
+}
+
+.scorecard-screen-tight .stat-card {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0 !important;
+    background: #000000 !important;
+    border: 0 !important;
+    padding: 0 !important;
+    height: 112px !important;
+    min-height: 112px !important;
+    overflow: hidden !important;
+}
+
+.scorecard-screen-tight .stat-card .main-img,
+.scorecard-screen-tight .stat-card .fake-image {
+    width: 100% !important;
+    height: 112px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    background: #1f2028 !important;
+    display: block !important;
+}
+
+.scorecard-screen-tight .score-putts-entry-box {
+    background: #1f2028 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 112px !important;
+    min-height: 112px !important;
+}
+
+.scorecard-screen-tight .score-putts-entry-box .q-field,
+.scorecard-screen-tight .score-putts-entry-box .q-field__control {
+    min-height: 112px !important;
+    height: 112px !important;
+    background: #1f2028 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.scorecard-screen-tight .score-putts-entry-box .q-field__native,
+.scorecard-screen-tight .score-putts-entry-box input {
+    color: #ffffff !important;
+    font-size: 56px !important;
+    font-weight: 1000 !important;
+    text-align: center !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+}
+
+.scorecard-screen-tight .score-putts-entry-box .q-field__control:before,
+.scorecard-screen-tight .score-putts-entry-box .q-field__control:after {
+    display: none !important;
+}
+
+
+/* FOUR TILE SCORE / PUTTS MOBILE LAYOUT */
+.scorecard-screen-tight .score-putts-four-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr !important;
+    gap: 0 !important;
+    width: 100% !important;
+    margin-top: 12px !important;
+    overflow: hidden !important;
+}
+
+.scorecard-screen-tight .score-putts-icon {
+    width: 100% !important;
+    height: 112px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+    background: #000000 !important;
+}
+
+.scorecard-screen-tight .score-putts-four-grid .score-putts-entry-box {
+    height: 112px !important;
+    min-height: 112px !important;
+    background: #1f2028 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+}
+
+.scorecard-screen-tight .score-putts-four-grid .q-field,
+.scorecard-screen-tight .score-putts-four-grid .q-field__control {
+    background: #1f2028 !important;
+    height: 112px !important;
+    min-height: 112px !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.scorecard-screen-tight .score-putts-four-grid input,
+.scorecard-screen-tight .score-putts-four-grid .q-field__native {
+    color: #ffffff !important;
+    font-size: 58px !important;
+    font-weight: 1000 !important;
+    text-align: center !important;
+    padding: 0 !important;
+}
+
+.scorecard-screen-tight .score-putts-four-grid .q-field__control:before,
+.scorecard-screen-tight .score-putts-four-grid .q-field__control:after {
+    display: none !important;
+}
+
+
+/* SCORE / PUTTS TRUE FOUR-SQUARE MOBILE LAYOUT */
+.scorecard-screen-tight .score-putts-four-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 0 !important;
+    width: 100% !important;
+    margin-top: 12px !important;
+    overflow: hidden !important;
+}
+
+.scorecard-screen-tight .score-putts-four-grid > * {
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+}
+
+.scorecard-screen-tight .score-putts-icon {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+    background: #000000 !important;
+}
+
+.scorecard-screen-tight .score-putts-four-grid .score-putts-entry-box {
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #1f2028 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+}
+
+.scorecard-screen-tight .score-putts-four-grid .q-field,
+.scorecard-screen-tight .score-putts-four-grid .q-field__control {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    aspect-ratio: 1 / 1 !important;
+    background: #1f2028 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.scorecard-screen-tight .score-putts-four-grid input,
+.scorecard-screen-tight .score-putts-four-grid .q-field__native {
+    color: #ffffff !important;
+    font-size: clamp(42px, 11vw, 68px) !important;
+    font-weight: 1000 !important;
+    text-align: center !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+
+.scorecard-screen-tight .score-putts-four-grid .q-field__control:before,
+.scorecard-screen-tight .score-putts-four-grid .q-field__control:after {
+    display: none !important;
+}
+
+
+/* ALWAYS START PLAY GOLF SCREEN AT TOP */
+.scorecard-screen-tight {
+    scroll-behavior: auto !important;
+}
+
+
+/* SIMPLE WHITE TRIANGLE NAV BUTTONS */
+.hole-nav-arrow,
+.hole-nav-arrow .q-btn__content {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 28px !important;
+    font-weight: 900 !important;
+    color: white !important;
+    line-height: 1 !important;
+}
+
+
+/* FORCE SIMPLE TRIANGLE NAV BUTTONS */
+.hole-nav-arrow,
+.hole-nav-arrow .q-btn__content,
+.hole-nav-arrow span {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 34px !important;
+    font-weight: 900 !important;
+    color: #ffffff !important;
+    line-height: 1 !important;
+}
+
+
+/* CSS-ONLY PLAY GOLF NAV TRIANGLES - NO EMOJI CHARACTERS */
+.scorecard-screen-tight .nav-btn,
+.scorecard-screen-tight .bottom-nav-arrow {
+    position: relative !important;
+    overflow: hidden !important;
+    background: #1f2028 !important;
+    background-color: #1f2028 !important;
+    color: transparent !important;
+    font-size: 0 !important;
+}
+
+.scorecard-screen-tight .nav-btn .q-btn__content,
+.scorecard-screen-tight .bottom-nav-arrow .q-btn__content {
+    color: transparent !important;
+    font-size: 0 !important;
+}
+
+.scorecard-screen-tight .nav-btn::after,
+.scorecard-screen-tight .bottom-nav-arrow::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.scorecard-screen-tight .nav-btn.nav-left::after,
+.scorecard-screen-tight .bottom-nav-arrow.nav-left::after {
+    border-top: 9px solid transparent !important;
+    border-bottom: 9px solid transparent !important;
+    border-right: 15px solid #ffffff !important;
+}
+
+.scorecard-screen-tight .nav-btn.nav-right::after,
+.scorecard-screen-tight .bottom-nav-arrow.nav-right::after {
+    border-top: 9px solid transparent !important;
+    border-bottom: 9px solid transparent !important;
+    border-left: 15px solid #ffffff !important;
+}
+
+
+/* PLAY GOLF LOCATION / QUALITY GRID ROW ALIGNMENT FIX */
+.scorecard-screen-tight .tee-grid,
+.scorecard-screen-tight .shot-grid,
+.scorecard-screen-tight .location-quality-grid,
+.scorecard-screen-tight .quality-grid {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    column-gap: 6px !important;
+    row-gap: 8px !important;
+    width: 100% !important;
+    align-items: stretch !important;
+}
+
+.scorecard-screen-tight .tee-grid > *,
+.scorecard-screen-tight .shot-grid > *,
+.scorecard-screen-tight .location-quality-grid > *,
+.scorecard-screen-tight .quality-grid > * {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    transform: none !important;
+    left: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.scorecard-screen-tight .grid-row,
+.scorecard-screen-tight .quality-row,
+.scorecard-screen-tight .tee-row {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    column-gap: 6px !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    transform: none !important;
+}
+
+.scorecard-screen-tight .grid-row > *,
+.scorecard-screen-tight .quality-row > *,
+.scorecard-screen-tight .tee-row > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    transform: none !important;
+}
+
+/* Target the actual shot selection buttons regardless of their existing row wrapper */
+.scorecard-screen-tight .shot-button,
+.scorecard-screen-tight .tee-shot-button,
+.scorecard-screen-tight .quality-button,
+.scorecard-screen-tight .location-quality-button {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+}
+
+
+/* TRUE 5-COLUMN PLAY GOLF TEE GRID */
+.tee-grid-fixed {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    width: 100% !important;
+    align-items: stretch !important;
+    box-sizing: border-box !important;
+}
+
+.tee-grid-fixed .tee-fixed-head {
+    color: #ffffff !important;
+    text-align: center !important;
+    font-size: 14px !important;
+    font-weight: 1000 !important;
+    line-height: 1.0 !important;
+    min-height: 34px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+}
+
+.tee-grid-fixed .q-btn,
+.tee-grid-fixed button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 72px !important;
+    min-height: 72px !important;
+    margin: 0 !important;
+    padding: 4px !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+    white-space: normal !important;
+    text-align: center !important;
+    overflow: hidden !important;
+}
+
+.tee-grid-fixed .q-btn__content {
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    line-height: 1.05 !important;
+    color: #ffffff !important;
+    white-space: normal !important;
+    text-align: center !important;
+}
+
+.tee-grid-fixed .tee-fixed-selected button,
+.tee-grid-fixed .tee-fixed-selected .q-btn {
+    border: 4px solid #ffffff !important;
+    box-shadow: 0 0 0 1px #4DDB68 !important;
+}
+
+
+/* FINAL TEE GRID TOP-LEFT CELL ALIGNMENT FIX */
+.tee-grid-fixed {
+    grid-auto-rows: auto !important;
+}
+
+.tee-grid-fixed > * {
+    align-self: stretch !important;
+    justify-self: stretch !important;
+    box-sizing: border-box !important;
+}
+
+.tee-grid-fixed > .q-btn,
+.tee-grid-fixed > button,
+.tee-grid-fixed > div {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.tee-grid-fixed > .q-btn:nth-child(6),
+.tee-grid-fixed > button:nth-child(6) {
+    transform: translateY(0px) !important;
+    margin-top: 0 !important;
+    height: 72px !important;
+    min-height: 72px !important;
+    max-height: 72px !important;
+}
+
+/* Make every tee button use the same internal vertical centering */
+.tee-grid-fixed .q-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.tee-grid-fixed .q-btn__content {
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+
+/* REAL HTML TEE GRID - FIXED ALIGNMENT */
+.tee-grid-html {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.tee-grid-html-head {
+    color: #ffffff !important;
+    text-align: center !important;
+    font-size: 14px !important;
+    font-weight: 1000 !important;
+    line-height: 1.0 !important;
+    min-height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+.tee-grid-html-cell {
+    height: 72px !important;
+    min-height: 72px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    line-height: 1.05 !important;
+    padding: 4px !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    white-space: normal !important;
+    overflow: hidden !important;
+}
+
+.tee-grid-html-cell.selected {
+    border: 4px solid #ffffff !important;
+    box-shadow: 0 0 0 1px #4DDB68 !important;
+}
+
+
+/* INLINE SCORING ZONE UNDER FAIRWAY HIT */
+.scoring-zone-inline-wrap {
+    margin-top: 16px !important;
+    margin-bottom: 22px !important;
+}
+
+.scoring-zone-inline-title {
+    text-transform: uppercase !important;
+}
+
+
+/* CLICKABLE DIV TEE GRID - ALIGNED AND MOBILE SAFE */
+.tee-grid-clickable {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.tee-grid-clickable-head {
+    color: #ffffff !important;
+    text-align: center !important;
+    font-size: 14px !important;
+    font-weight: 1000 !important;
+    line-height: 1.0 !important;
+    min-height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+.tee-grid-clickable-cell {
+    height: 72px !important;
+    min-height: 72px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 1000 !important;
+    line-height: 1.05 !important;
+    padding: 4px !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    white-space: normal !important;
+    overflow: hidden !important;
+    touch-action: manipulation !important;
+    border: 4px solid transparent !important;
+}
+
+.tee-grid-clickable-cell.selected {
+    border: 4px solid #ffffff !important;
+    box-shadow: 0 0 0 1px #4DDB68 !important;
+}
+
+
+/* DIRECT ENTRY PENALTIES / HAZARDS / GASHES */
+.direct-counter-grid .direct-counter-tile {
+    background: #1a1a1a !important;
+    overflow: hidden !important;
+}
+
+.direct-counter-grid .tile-label,
+.direct-counter-grid .tile-controls,
+.direct-counter-grid .minus,
+.direct-counter-grid .plus,
+.direct-counter-grid .tile-value {
+    display: none !important;
+}
+
+.direct-counter-img {
+    width: 100% !important;
+    height: 94px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+}
+
+.direct-counter-input-wrap {
+    background: #1a1a1a !important;
+    height: 96px !important;
+    min-height: 96px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.direct-counter-input {
+    width: 100% !important;
+}
+
+.direct-counter-input .q-field,
+.direct-counter-input .q-field__control {
+    width: 100% !important;
+    height: 96px !important;
+    min-height: 96px !important;
+    background: #1a1a1a !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.direct-counter-input input,
+.direct-counter-input .q-field__native {
+    color: #ffffff !important;
+    font-size: 48px !important;
+    font-weight: 1000 !important;
+    text-align: center !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+
+.direct-counter-input .q-field__control:before,
+.direct-counter-input .q-field__control:after {
+    display: none !important;
+}
+
+@media (max-width: 430px) {
+    .direct-counter-img {
+        height: 78px !important;
+    }
+
+    .direct-counter-input-wrap,
+    .direct-counter-input .q-field,
+    .direct-counter-input .q-field__control {
+        height: 82px !important;
+        min-height: 82px !important;
+    }
+
+    .direct-counter-input input,
+    .direct-counter-input .q-field__native {
+        font-size: 42px !important;
+    }
+}
+
+
+/* SELECTED OUTLINE FOR FAIRWAY / GREEN HIT AND SCORING ZONE */
+.direct-fir-gir-selected {
+    border: 4px solid #ffffff !important;
+    box-shadow: 0 0 0 1px #4DDB68 !important;
+}
+
+.direct-fir-gir-btn {
+    box-sizing: border-box !important;
+}
+
+
+/* FORCE WHITE OUTLINE ON SELECTED YES / NO BUTTONS */
+.direct-fir-gir-btn.direct-fir-gir-selected,
+.direct-fir-gir-btn.direct-fir-gir-selected.q-btn,
+.direct-fir-gir-selected,
+.direct-fir-gir-selected button,
+.direct-fir-gir-selected .q-btn {
+    border: 5px solid #ffffff !important;
+    box-shadow: inset 0 0 0 2px #ffffff, 0 0 0 1px #4DDB68 !important;
+    filter: none !important;
+    box-sizing: border-box !important;
+}
+
+.direct-fir-gir-btn.direct-fir-gir-inactive:not(.direct-fir-gir-selected) {
+    filter: brightness(.42) !important;
+    border: 5px solid transparent !important;
+    box-sizing: border-box !important;
+}
+
 </style>
 '''
 
@@ -5191,8 +5880,14 @@ def update_hole_display():
 
 def update_main_values():
     entry = current_entry()
-    score_label.set_text(str(entry['score']))
-    putts_label.set_text(str(entry['putts']))
+    try:
+        score_input.value = '' if entry.get('score', '') in [None, ''] else str(entry.get('score', ''))
+    except Exception:
+        pass
+    try:
+        putts_input.value = '' if entry.get('putts', '') in [None, ''] else str(entry.get('putts', ''))
+    except Exception:
+        pass
 
 
 def update_summary():
@@ -5251,6 +5946,32 @@ def change_putts(delta):
 
 
 
+def set_score_direct(value):
+    entry = current_entry()
+    try:
+        if value is None or str(value).strip() == '':
+            entry['score'] = 0
+        else:
+            entry['score'] = max(0, int(value))
+    except Exception:
+        entry['score'] = entry.get('score', entry.get('par', 0))
+    update_main_values()
+    update_summary()
+
+
+def set_putts_direct(value):
+    entry = current_entry()
+    try:
+        if value is None or str(value).strip() == '':
+            entry['putts'] = 0
+        else:
+            entry['putts'] = max(0, int(value))
+    except Exception:
+        entry['putts'] = 0
+    update_main_values()
+    update_summary()
+
+
 def change_counter(group, key, delta):
     entry = current_entry()
     entry[group][key] = max(0, entry[group][key] + delta)
@@ -5271,6 +5992,21 @@ def set_tee(location, quality):
 
 
 
+
+
+def scoring_zone_shot_count(par):
+    par = safe_int(par, 4)
+    if par <= 3:
+        return 1
+    if par == 4:
+        return 2
+    return 3
+
+
+def scoring_zone_question_for_entry(entry):
+    shots = scoring_zone_shot_count(entry.get('par', 4))
+    word = 'SHOT' if shots == 1 else 'SHOTS'
+    return f'INSIDE 100 YARDS IN {shots} {word}?'
 def set_inside(value):
     current_entry()['inside_100_in_3'] = value
     update_inside_buttons()
@@ -5279,11 +6015,8 @@ def set_inside(value):
 
 
 def update_inside_buttons():
-    entry = current_entry()
-    yes_class = 'active-choice' if entry['inside_100_in_3'] == 'YES' else ''
-    no_class = 'active-choice' if entry['inside_100_in_3'] == 'NO' else ''
-    inside_yes_btn.classes(replace=yes_class)
-    inside_no_btn.classes(replace=no_class)
+    # Scoring zone buttons are now rendered inline beneath Fairway/Green Hit.
+    return
 
 
 def update_club(event):
@@ -5392,19 +6125,72 @@ def render_direct_fir_gir(entry):
 
     current_value = entry.get(field, 'NO') or 'NO'
 
-    yes_class = 'direct-fir-gir-btn direct-fir-gir-yes'
-    no_class = 'direct-fir-gir-btn direct-fir-gir-no'
+    fairway_yes_selected = current_value == 'YES'
+    fairway_no_selected = current_value == 'NO'
 
-    if current_value != 'YES':
-        yes_class += ' direct-fir-gir-inactive'
-    if current_value != 'NO':
-        no_class += ' direct-fir-gir-inactive'
+    fairway_yes_class = 'direct-fir-gir-btn direct-fir-gir-yes'
+    fairway_no_class = 'direct-fir-gir-btn direct-fir-gir-no'
+
+    if fairway_yes_selected:
+        fairway_yes_class += ' direct-fir-gir-selected'
+    else:
+        fairway_yes_class += ' direct-fir-gir-inactive'
+
+    if fairway_no_selected:
+        fairway_no_class += ' direct-fir-gir-selected'
+    else:
+        fairway_no_class += ' direct-fir-gir-inactive'
+
+    fairway_yes_style = (
+        'background:#4CAF50 !important; background-color:#4CAF50 !important; color:white !important; '
+        + ('border:5px solid #ffffff !important; box-shadow: inset 0 0 0 2px #ffffff !important; filter:none !important;' if fairway_yes_selected else 'border:5px solid transparent !important;')
+    )
+    fairway_no_style = (
+        'background:#F44336 !important; background-color:#F44336 !important; color:white !important; '
+        + ('border:5px solid #ffffff !important; box-shadow: inset 0 0 0 2px #ffffff !important; filter:none !important;' if fairway_no_selected else 'border:5px solid transparent !important;')
+    )
 
     with ui.element('div').classes('direct-fir-gir-wrap'):
         ui.html('<div class="direct-fir-gir-title">' + title + '</div>')
         with ui.element('div').classes('direct-fir-gir-buttons'):
-            ui.button('YES', on_click=lambda: set_direct_fir_gir(field, 'YES')).classes(yes_class).style('background:#4CAF50 !important; background-color:#4CAF50 !important; color:white !important;')
-            ui.button('NO', on_click=lambda: set_direct_fir_gir(field, 'NO')).classes(no_class).style('background:#F44336 !important; background-color:#F44336 !important; color:white !important;')
+            ui.button('YES', on_click=lambda: set_direct_fir_gir(field, 'YES')).classes(fairway_yes_class).style(fairway_yes_style)
+            ui.button('NO', on_click=lambda: set_direct_fir_gir(field, 'NO')).classes(fairway_no_class).style(fairway_no_style)
+
+    zone_question = scoring_zone_question_for_entry(entry)
+    zone_value = entry.get('inside_100_in_3', 'NO') or 'NO'
+
+    zone_yes_selected = zone_value == 'YES'
+    zone_no_selected = zone_value == 'NO'
+
+    zone_yes_class = 'direct-fir-gir-btn direct-fir-gir-yes'
+    zone_no_class = 'direct-fir-gir-btn direct-fir-gir-no'
+
+    if zone_yes_selected:
+        zone_yes_class += ' direct-fir-gir-selected'
+    else:
+        zone_yes_class += ' direct-fir-gir-inactive'
+
+    if zone_no_selected:
+        zone_no_class += ' direct-fir-gir-selected'
+    else:
+        zone_no_class += ' direct-fir-gir-inactive'
+
+    zone_yes_style = (
+        'background:#4CAF50 !important; background-color:#4CAF50 !important; color:white !important; '
+        + ('border:5px solid #ffffff !important; box-shadow: inset 0 0 0 2px #ffffff !important; filter:none !important;' if zone_yes_selected else 'border:5px solid transparent !important;')
+    )
+    zone_no_style = (
+        'background:#F44336 !important; background-color:#F44336 !important; color:white !important; '
+        + ('border:5px solid #ffffff !important; box-shadow: inset 0 0 0 2px #ffffff !important; filter:none !important;' if zone_no_selected else 'border:5px solid transparent !important;')
+    )
+
+    with ui.element('div').classes('direct-fir-gir-wrap scoring-zone-inline-wrap'):
+        ui.html('<div class="direct-fir-gir-title scoring-zone-inline-title">' + zone_question + '</div>')
+        with ui.element('div').classes('direct-fir-gir-buttons'):
+            ui.button('YES', on_click=lambda: set_inside('YES')).classes(zone_yes_class).style(zone_yes_style)
+            ui.button('NO', on_click=lambda: set_inside('NO')).classes(zone_no_class).style(zone_no_style)
+
+
 
 
 def rebuild_tee_grid():
@@ -5418,28 +6204,56 @@ def rebuild_tee_grid():
 
     with tee_container:
         caption = 'PAR 3 TEE SHOT GRID' if par == 3 else 'PAR 4 / PAR 5 TEE SHOT GRID'
+
         ui.html(f'<div class="tee-caption">{caption}</div>')
         ui.html('<div class="club-label">CLUB</div>')
-        ui.select(CLUBS, value=entry['tee_club'] if entry.get('tee_club') in CLUBS else 'DRIVER', on_change=update_club).props('outlined dark color=green').classes('w-full')
+
+        ui.select(
+            CLUBS,
+            value=entry['tee_club'] if entry.get('tee_club') in CLUBS else 'DRIVER',
+            on_change=update_club
+        ).props('outlined dark color=green').classes('w-full')
+
         ui.html('<div class="tee-entry-heading">LOCATION / QUALITY GRID</div>')
 
-        with ui.element('div').classes('tee-grid'):
-            for location in TEE_LOCATIONS:
-                with ui.element('div'):
-                    ui.html(f'<div class="tee-col-title">{location}</div>')
-                    for quality in qualities:
-                        color = tee_color(par, location, quality)
-                        selected = entry['tee_location'] == location and entry['tee_quality'] == quality
-                        cls = 'tee-btn tee-selected' if selected else 'tee-btn'
-                        ui.button(
-                            quality,
-                            on_click=lambda loc=location, qual=quality: set_tee(loc, qual),
-                        ).classes(cls).style(f'background:{color} !important;')
+        locations = ['LOST LEFT', 'LEFT', 'CENTER', 'RIGHT', 'LOST RIGHT']
+
+        with ui.element('div').classes('tee-grid-clickable'):
+            for location in locations:
+                label = location.replace(' ', '<br>')
+                ui.html(f'<div class="tee-grid-clickable-head">{label}</div>')
+
+            for quality in qualities:
+                for location in locations:
+                    color = tee_color(par, location, quality)
+                    selected = entry['tee_location'] == location and entry['tee_quality'] == quality
+                    cls = 'tee-grid-clickable-cell selected' if selected else 'tee-grid-clickable-cell'
+
+                    cell = ui.element('div').classes(cls).style(
+                        f'background:{color} !important;'
+                    )
+                    cell.on('click', lambda e, loc=location, qual=quality: set_tee(loc, qual))
+                    with cell:
+                        ui.html(f'<div>{quality}</div>')
 
         ui.html(f'<div class="selected-note">SELECTED: {entry["tee_location"]} / {entry["tee_quality"]}</div>')
         render_direct_fir_gir(entry)
 
 
+
+
+def set_counter_direct(group, item, value):
+    entry = current_entry()
+    try:
+        if value is None or str(value).strip() == '':
+            entry[group][item] = 0
+        else:
+            entry[group][item] = max(0, int(value))
+    except Exception:
+        entry[group][item] = 0
+
+    update_summary()
+    save_app_state('scorecard')
 def rebuild_counter_grid(container, title, items, group, images, fallback_bg):
     container.clear()
     entry = current_entry()
@@ -5448,16 +6262,18 @@ def rebuild_counter_grid(container, title, items, group, images, fallback_bg):
         ui.html('<div class="white-line"></div>')
         ui.html(f'<div class="section-title">{title}</div>')
 
-        with ui.element('div').classes('tile-grid'):
+        with ui.element('div').classes('tile-grid direct-counter-grid'):
             for item in items:
-                with ui.element('div').classes('tile'):
-                    ui.html(image_html(images.get(item, ''), item, 'tile-img', 'tile-fallback', fallback_bg))
-                    ui.html(f'<div class="tile-label">{item}</div>')
-                    ui.html(f'<div class="tile-value">{entry[group][item]}</div>')
+                with ui.element('div').classes('tile direct-counter-tile'):
+                    ui.html(image_html(images.get(item, ''), item, 'tile-img direct-counter-img', 'tile-fallback direct-counter-img', fallback_bg))
 
-                    with ui.element('div').classes('tile-controls'):
-                        ui.button('−', on_click=lambda k=item, g=group: change_counter(g, k, -1)).classes('minus')
-                        ui.button('+', on_click=lambda k=item, g=group: change_counter(g, k, 1)).classes('plus')
+                    with ui.element('div').classes('direct-counter-input-wrap'):
+                        ui.input(
+                            value=str(entry[group].get(item, 0)),
+                            on_change=lambda e, k=item, g=group: set_counter_direct(g, k, e.value)
+                        ).props(
+                            'borderless type=number inputmode=numeric pattern=[0-9]*'
+                        ).classes('direct-counter-input')
 
 
 
@@ -5470,7 +6286,7 @@ except Exception:
 
 def scroll_page_to_top():
     try:
-        ui.run_javascript('setTimeout(() => { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }, 100);')
+        ui.run_javascript('setTimeout(() => { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; document.documentElement.scrollLeft = 0; document.body.scrollLeft = 0; }, 100);')
     except Exception:
         pass
 
@@ -8604,33 +9420,52 @@ def show_scorecard():
 
     with root_container:
         with ui.element('div').classes('main-wrap scorecard-screen-tight'):
-            add_screen_home_icon()
+            ui.run_javascript('setTimeout(() => { window.scrollTo(0,0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; document.documentElement.scrollLeft = 0; document.body.scrollLeft = 0; }, 50); setTimeout(() => { window.scrollTo(0,0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; document.documentElement.scrollLeft = 0; document.body.scrollLeft = 0; }, 250);')
 
             with ui.element('div').classes('hole-nav'):
-                ui.button('◀', on_click=lambda: change_hole(-1)).classes('nav-btn')
+                ui.button('', on_click=lambda: change_hole(-1)).props('flat color=dark').classes('nav-btn nav-left')
                 global hole_nav_html
                 hole_nav_html = ui.html('')
-                ui.button('▶', on_click=lambda: change_hole(1)).classes('nav-btn')
+                ui.button('', on_click=lambda: change_hole(1)).props('flat color=dark').classes('nav-btn nav-right')
 
             global hole_card_html
             hole_card_html = ui.html('')
 
-            with ui.element('div').classes('main-grid'):
-                with ui.element('div').classes('stat-card'):
-                    ui.html(image_html(MAIN_IMAGES['SCORE'], 'SCORE', 'main-img', 'fake-image score-bg', '#b89c72'))
-                    global score_label
-                    score_label = ui.label('').classes('big-number')
-                    with ui.element('div').classes('control-row'):
-                        ui.button('−', on_click=lambda: change_score(-1)).classes('minus')
-                        ui.button('+', on_click=lambda: change_score(1)).classes('plus')
+            with ui.element('div').classes('main-grid score-putts-four-grid'):
 
-                with ui.element('div').classes('stat-card'):
-                    ui.html(image_html(MAIN_IMAGES['PUTTS'], 'PUTTS', 'main-img', 'fake-image putts-bg', '#4f9d00'))
-                    global putts_label
-                    putts_label = ui.label('').classes('big-number')
-                    with ui.element('div').classes('control-row'):
-                        ui.button('−', on_click=lambda: change_putts(-1)).classes('minus')
-                        ui.button('+', on_click=lambda: change_putts(1)).classes('plus')
+                ui.html(image_html(
+                    MAIN_IMAGES['SCORE'],
+                    'SCORE',
+                    'main-img score-putts-icon',
+                    'fake-image score-bg score-putts-icon',
+                    '#b89c72'
+                ))
+
+                with ui.element('div').classes('score-putts-entry-box'):
+                    global score_input
+                    score_input = ui.input(
+                        value='',
+                        on_change=lambda e: set_score_direct(e.value)
+                    ).props(
+                        'borderless type=number inputmode=numeric pattern=[0-9]*'
+                    ).classes('w-full')
+
+                ui.html(image_html(
+                    MAIN_IMAGES['PUTTS'],
+                    'PUTTS',
+                    'main-img score-putts-icon',
+                    'fake-image putts-bg score-putts-icon',
+                    '#4f9d00'
+                ))
+
+                with ui.element('div').classes('score-putts-entry-box'):
+                    global putts_input
+                    putts_input = ui.input(
+                        value='',
+                        on_change=lambda e: set_putts_direct(e.value)
+                    ).props(
+                        'borderless type=number inputmode=numeric pattern=[0-9]*'
+                    ).classes('w-full')
 
             ui.html('<div class="white-line"></div>')
             ui.html('<div class="section-title">TEE SHOT</div>')
@@ -8640,24 +9475,15 @@ def show_scorecard():
             global hazard_container
             hazard_container = ui.element('div')
 
-            ui.html('<div class="white-line"></div>')
-            ui.html('<div class="section-title">SCORING ZONE</div>')
-            ui.html('<div class="scoring-question">INSIDE 100 YARDS IN 3 SHOTS?</div>')
-
-            with ui.element('div').classes('yes-no-grid'):
-                global inside_yes_btn, inside_no_btn
-                inside_yes_btn = ui.button('YES', on_click=lambda: set_inside('YES')).props('color=green')
-                inside_no_btn = ui.button('NO', on_click=lambda: set_inside('NO')).props('color=red')
-
             global gash_container
             gash_container = ui.element('div')
 
             with ui.element('div').classes('bottom-hole-nav'):
                 with ui.element('div').classes('hole-nav-row-bottom'):
-                    ui.button('◀', on_click=lambda: change_hole(-1)).classes('bottom-nav-arrow')
+                    ui.button('', on_click=lambda: change_hole(-1)).props('flat color=dark').classes('bottom-nav-arrow nav-left')
                     global bottom_hole_nav_html
                     bottom_hole_nav_html = ui.html('')
-                    ui.button('▶', on_click=lambda: change_hole(1)).classes('bottom-nav-arrow')
+                    ui.button('', on_click=lambda: change_hole(1)).props('flat color=dark').classes('bottom-nav-arrow nav-right')
 
             ui.html('<div class="white-line"></div>')
             ui.html('<div class="section-title">ROUND SUMMARY</div>')
